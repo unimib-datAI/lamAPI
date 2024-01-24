@@ -1,0 +1,5 @@
+<img src="https://i.postimg.cc/Fs9kvLPX/llama.png" alt="My Image" heigth="200" width="200">
+<strong>LamAPI - Label Matching API</strong> is a project that aims to provide an easy way to store and access <a href="https://www.wikidata.org/">Wikidata</a> dump.
+Through an API specification, the tool allows Full-Text search over Wikidata and DBPedia and provides several services to retrieve data about entities. LamAPI can perform tasks like string classification, entity embedding representation.
+<br/>
+It is possible to test the API using the token: <code>insideslab-lamapi-2022</code> (<small>The maximum number of requests per day is 1000</small>).

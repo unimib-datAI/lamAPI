@@ -1,0 +1,23 @@
+{
+    "wikidata": {
+        "indexes": {
+            "human": "wd_human",
+            "organization": "wd_organization",
+            "location": "wd_location",
+            "creativework_film_videogame_tvseries": "wd_creativework_film_videogame_tvseries",
+            "species_event_timeinterval_physicalobject": "wd_species_event_timeinterval_physicalobject",
+            "category": "wd_category",
+            "disambiguation": "wd_disambiguation",
+            "predicate": "wd_predicate",
+            "type": "wd_type",
+            "other": "wd_other"
+        },
+        "indexes_to_filter_out":  ["category", "disambiguation", "predicate"]
+    },
+    "crunchbase": {
+        "indexes": {
+            "companies": "cb_companies"
+        },
+        "indexes_to_filter_out":  []
+    }
+}
