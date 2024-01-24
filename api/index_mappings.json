@@ -19,5 +19,20 @@
             "companies": "cb_companies"
         },
         "indexes_to_filter_out":  []
+    },
+    "fake": {
+        "indexes": {
+            "human": "fake_human",
+            "organization": "fake_organization",
+            "location": "fake_location",
+            "creativework_film_videogame_tvseries": "fake_creativework_film_videogame_tvseries",
+            "species_event_timeinterval_physicalobject": "fake_species_event_timeinterval_physicalobject",
+            "category": "fake_category",
+            "disambiguation": "fake_disambiguation",
+            "predicate": "fake_predicate",
+            "type": "fake_type",
+            "other": "fake_other"
+        },
+        "indexes_to_filter_out":  []
     }
 }

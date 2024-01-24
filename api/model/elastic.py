@@ -13,7 +13,7 @@ with open("index_mappings.json") as f:
     indexes_mappings = json.loads(f.read())
 
 
-if "ELASTIC_FINGERPRINT" not in os.environ:
+if "ELASTIC_FINGERPRINT" not in os.environ or len(os.environ["ELASTIC_FINGERPRINT"]) == 0:
     bashCommand = """
                     openssl s_client -connect es01:9200 -servername es01 -showcerts </dev/null 2>/dev/null | 
                     openssl x509 -fingerprint -sha256 -noout -in /dev/stdin

@@ -18,7 +18,7 @@ from model.database import Database
 
 
 database = Database()
-create_index(database)
+#create_index(database)
 
 
 with open("query_templates.json") as f:
@@ -401,34 +401,6 @@ class Predicates(BaseEndpoint):
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
                 return predicates_retriever.get_predicates_output(data, kg_error_or_value)
-            else:
-                return build_error("Invalid Data", 400)
-
-
-
-@entity.route('/mention/embedding/fasttext')
-@api.doc(
-    description='Given a JSON array as input composed of mentions can be associated to a entities, the endpoint returns the [fasttext](https://fasttext.cc/) embedding vector for each mention.',
-    params={"token": "Private token to access the APIs.",}
-)
-class Fasstext(BaseEndpoint):
-    @entity.doc(body=fields_rdf2vec)
-    def post(self):
-        # get parameters
-        parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
-        args = parser.parse_args()
-
-        token = args["token"]
-
-        token_is_valid, token_error = params_validator.validate_token(token)
-
-        if not token_is_valid:
-            return token_error
-        else:
-            is_data_valid, data = super().validate_and_get_json_format()
-            if is_data_valid:
-                return fasttext_retriever.get_vectors(data)
             else:
                 return build_error("Invalid Data", 400)
 
