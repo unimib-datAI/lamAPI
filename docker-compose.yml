@@ -26,7 +26,7 @@ services:
     restart: always   
     volumes:
       - ./mongo-data:/data/db
-      - ../my-data:/data/my-data  
+      - ~/my-data:/data/my-data  
  
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}

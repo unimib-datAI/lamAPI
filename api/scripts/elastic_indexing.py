@@ -4,7 +4,6 @@ import subprocess
 import json
 import sys
 
-
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 from pymongo import MongoClient
@@ -51,9 +50,9 @@ ELASTIC_LIMITS = 100
 ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
 
 try:
-    kg = sys.argv[1:][0]
+    db_name = sys.argv[1:][0]
 except:
-    sys.exit("Please provide a KG name as an argument")
+    sys.exit("Please provide a DB name name as an argument")
 
 bashCommand = """
                 openssl s_client -connect es01:9200 -servername es01 -showcerts </dev/null 2>/dev/null | 
@@ -70,11 +69,19 @@ MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
 MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
 MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
 client = MongoClient(MONGO_ENDPOINT, int(MONGO_ENDPOINT_PORT), username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
-documents_c = client[kg].items
+documents_c = client[db_name].items
   
 
 BATCH = 10000
+# Find the document with the maximum popularity value
+max_popularity_doc = documents_c.find_one(sort=[("popularity", -1)])
 
+# Check if there's a result
+if max_popularity_doc:
+    max_popularity = max_popularity_doc["popularity"]
+    print(f"The maximum popularity is: {max_popularity}")
+else:
+    raise Exception("No documents found in the collection or popularity field is missing.")
 
 es = Elasticsearch(
             hosts=f'https://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
@@ -174,7 +181,7 @@ for i, item in enumerate(tqdm(results, total=TOTAL_DOCS)):
             "types":  " ".join(types["P31"]),
             "length": len(name),
             "ntoken": len(name.split(' ')),
-            "popularity": popularity
+            "popularity": round(popularity / max_popularity, 2)
         }
         
         index += 1 

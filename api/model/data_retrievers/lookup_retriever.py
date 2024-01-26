@@ -1,5 +1,4 @@
 from model.elastic import Elastic
-from model.database import Database
 from model.utils import editdistance, clean_str, compute_similarity_between_string
 import datetime
 
@@ -12,14 +11,9 @@ class LookupRetriever:
 
     def search(self, label, limit = 100, kg = "wikidata", fuzzy = False, types = None, ids = None):
         self.candidate_cache_collection = self.database.get_requested_collection("cache", kg=kg)
-        if type(label) == list:
-            label_norm = [cell.strip().lower() for cell in label]
-            query_result = self._exec_multi_query(label_norm, limit = limit, kg = kg,
-                                                  fuzzy = fuzzy, types = types, ids = ids)
-        else:
-            label_norm = label.strip().lower()   
-            query_result = self._exec_query(label_norm, limit = limit, kg = kg,
-                                            fuzzy = fuzzy, types = types, ids = ids)
+        label_norm = label.strip().lower()   
+        query_result = self._exec_query(label_norm, limit = limit, kg = kg,
+                                        fuzzy = fuzzy, types = types, ids = ids)
             
         return query_result
 
@@ -159,7 +153,7 @@ class LookupRetriever:
 
         return final_result
 
-    def create_query(self, name, fuzzy = False, ngrams = False, types = None):
+    def create_query(self, name, fuzzy = False, types = None):
 
         splitted_name = name.split(" ")
         
@@ -175,10 +169,6 @@ class LookupRetriever:
         # add fuzzy
         if fuzzy:
             query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
-
-        # add ngrams
-        if ngrams:
-            query_base["query"]["bool"]["should"].append({"match": {"name.ngrams": {"query": name}}})
 
         # add types constraint
         if types is not None:
