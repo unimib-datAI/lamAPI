@@ -8,7 +8,7 @@ LamAPI provides a user-friendly interface for streamlined access to Wikidata, of
 
 The following diagram illustrates the data processing pipeline used by LamAPI:
 
-![Data Discovery: current workflow](./pictures/temp2.svg)
+![Data Discovery: current workflow](./pictures/temp.svg)
 
 *Replace `image-path.png` with the actual path to the image in your repository.*
 
