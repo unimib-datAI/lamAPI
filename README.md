@@ -10,8 +10,6 @@ The following diagram illustrates the data processing pipeline used by LamAPI:
 
 ![Data Discovery: current workflow](./pictures/temp.svg)
 
-*Replace `image-path.png` with the actual path to the image in your repository.*
-
 LamAPI processes data from Wikidata through the following stages:
 
 1. **Data Ingestion**: The large compressed Wikidata dump file is ingested into the LamAPI ecosystem.
