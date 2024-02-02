@@ -21,16 +21,10 @@ for dir in "${dirs[@]}"; do
   fi
 done
 
-# Set permissions - adjust the UID:GID according to your needs
-# Use `id -u` and `id -g` to find out your current user's UID and GID
-uid=$(id -u)
-gid=$(id -g)
-
-echo "Setting permissions with UID:GID = $uid:$gid"
+echo "Setting permissions to 777"
 for dir in "${dirs[@]}"; do
-  # Find all files and directories excluding __pycache__ and *.pyc, then change ownership
-  find "$dir" -type d ! -name '__pycache__' -exec chown $uid:$gid {} + \
-       -o -type f ! -name '*.pyc' -exec chown $uid:$gid {} +
+  # Set permissions to 777 for directories and files within
+  chmod -R 777 "$dir"
 done
 
 echo "Setup complete."
