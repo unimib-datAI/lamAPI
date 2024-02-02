@@ -14,12 +14,6 @@
         },
         "indexes_to_filter_out":  ["category", "disambiguation", "predicate"]
     },
-    "crunchbase": {
-        "indexes": {
-            "companies": "cb_companies"
-        },
-        "indexes_to_filter_out":  []
-    },
     "fake": {
         "indexes": {
             "human": "fake_human",
