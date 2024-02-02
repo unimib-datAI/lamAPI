@@ -19,6 +19,7 @@ def index_documents(es, buffer, max_retries=5):
             bulk(es, buffer)
         except Exception as e:
             # Handle the exception or log the error message
+            traceback.print_exc()  # This will print the full traceback
             print("An error occurred during indexing:", str(e))
             time.sleep(5)
             continue
