@@ -27,10 +27,7 @@ MAPPING = {
             "types": {"type": "keyword"},
             "length": {"type": "long"},
             "ntoken": {"type": "long"},
-            "popularity": {
-                "type": "rank_feature",
-                "positive_score_impact": True
-            }
+            "popularity": {"type": "double"}
         }
     }
 }
