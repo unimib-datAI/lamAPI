@@ -211,8 +211,6 @@ services:
       retries: 120
 
   kibana:
-    command: >
-      bash -c "chown -R kibana:kibana /usr/share/kibana/data && /usr/local/bin/kibana-docker"
     depends_on:
       es01:
         condition: service_healthy
