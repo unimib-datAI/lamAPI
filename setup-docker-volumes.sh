@@ -28,9 +28,9 @@ gid=$(id -g)
 
 echo "Setting permissions with UID:GID = $uid:$gid"
 for dir in "${dirs[@]}"; do
-  # Change ownership to the current user
-  # Use `sudo` if necessary, depending on your directory permissions
-  chown -R $uid:$gid "$dir"
+  # Find all files and directories excluding __pycache__ and *.pyc, then change ownership
+  find "$dir" -type d ! -name '__pycache__' -exec chown $uid:$gid {} + \
+       -o -type f ! -name '*.pyc' -exec chown $uid:$gid {} +
 done
 
 echo "Setup complete."
