@@ -6,25 +6,37 @@ import sys
 import traceback
 
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk
+from elasticsearch.helpers import bulk, BulkIndexError
+
 from pymongo import MongoClient
 from tqdm import tqdm
 
 from conf import MAPPING
 
 
+
 def index_documents(es, buffer, max_retries=5):
-    for _ in range(max_retries):
+    for attempt in range(max_retries):
         try:
             bulk(es, buffer)
-        except Exception as e:
-            # Handle the exception or log the error message
-            traceback.print_exc()  # This will print the full traceback
-            print("An error occurred during indexing:", str(e))
+            break  # Exit the loop if the bulk operation was successful
+        except BulkIndexError as e:
+            # Log detailed information about the documents that failed to index
+            print(f"Bulk indexing error on attempt {attempt + 1}: {e.errors}")
+            # Extract and log more detailed info for each error
+            for error_detail in e.errors:
+                action, error_info = list(error_detail.items())[0]
+                print(f"Failed action: {action}")
+                print(f"Error details: {error_info}")
             time.sleep(5)
-            continue
+        except Exception as e:
+            # Handle other exceptions
+            print(f"An unexpected error occurred during indexing on attempt {attempt + 1}: {str(e)}")
+            traceback.print_exc()  # Print the full traceback for unexpected errors
+            time.sleep(5)
     else:
-        print("Max retries exceeded. Failed to index the documents.")
+        print("Max retries exceeded. Failed to index some documents.")
+
 
         
 def generate_dot_notation_options(name):
