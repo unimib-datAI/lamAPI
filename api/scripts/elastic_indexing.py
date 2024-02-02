@@ -3,6 +3,7 @@ import time
 import subprocess
 import json
 import sys
+import traceback
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
@@ -202,5 +203,6 @@ try:
     print('All Finished') 
 except Exception as e:
     print(e)
+    traceback.print_exc()  # This will print the full traceback
     print("An error occurred. Exiting...")
     sys.exit(1)
