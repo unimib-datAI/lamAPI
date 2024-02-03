@@ -4,6 +4,7 @@ import subprocess
 import json
 import sys
 import traceback
+import re
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk, BulkIndexError
@@ -65,9 +66,9 @@ ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
 
 try:
     db_name = sys.argv[1:][0]
-    kg_name = sys.argv[1:][1]
+    kg_name = match = re.match(r"([a-zA-Z]+)(\d+)", db_name).group(1)
 except:
-    sys.exit("Please provide a DB name and KG name as arguments")
+    sys.exit("Please provide a DB name as argument")
 
 bashCommand = """
                 openssl s_client -connect es01:9200 -servername es01 -showcerts </dev/null 2>/dev/null | 
