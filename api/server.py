@@ -590,10 +590,9 @@ class Summary(BaseEndpoint):
 
         # Implement the logic to retrieve Wikidata or DBpedia summary based on parameters
         if data_type == 'objects':
-            results = summary_retriever.get_objects_summary(kg=kg_error_or_value, rank_order='desc', k=k)
+            results = summary_retriever.get_objects_summary(kg=kg_error_or_value, rank_order=rank_order, k=k)
         elif data_type == 'literals':
-            results = summary_retriever.get_literals_summary(kg=kg_error_or_value, rank_order='desc', k=k)
-
+            results = summary_retriever.get_literals_summary(kg=kg_error_or_value, rank_order=rank_order, k=k)
         else:
             return build_error("Invalid data type. Use 'objects' or 'literals'.", 400)
 
