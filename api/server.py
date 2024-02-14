@@ -12,13 +12,13 @@ from model.data_retrievers.objects_retriever import ObjectsRetriever
 from model.data_retrievers.predicates_retriever import PredicatesRetriever
 from model.data_retrievers.types_retriever import TypesRetriever
 from model.data_retrievers.sameas_retriever import SameasRetriever
+from model.data_retrievers.summary_retriever import SummaryRetriever
 from model.params_validator import ParamsValidator
-from model.utils import build_error, create_index
+from model.utils import build_error
 from model.database import Database
 
 
 database = Database()
-#create_index(database)
 
 
 with open("query_templates.json") as f:
@@ -36,6 +36,7 @@ sameas_retriever = SameasRetriever(database)
 column_analysis_classifier = ColumnAnalysis()
 lookup_retriever = LookupRetriever(database)
 ner_recognition = NERRecognizer()
+summary_retriever = SummaryRetriever(database)
 
 def init_services():
     with open('data.txt') as f:
@@ -49,7 +50,8 @@ def init_services():
                                 description='Services to perform computations and retrieve additional data about entities.'),
         'lookup': api.namespace('lookup', description='Services to perform searches based on an input string.'),
         'sti': api.namespace('sti', description='Services to perform tasks related to Semantic Table Interpretation.'),
-        'classify': api.namespace('classify', description='Services to perform string categorisation.')
+        'classify': api.namespace('classify', description='Services to perform string categorisation.'),
+        'summary': api.namespace('summary', description='Services to get summary statiscs about the datasets.')
     }
 
     return app, api, namespaces
@@ -62,6 +64,7 @@ entity = namespaces['entity']
 lookup = namespaces['lookup']
 sti = namespaces['sti']
 classify = namespaces['classify']
+summary = namespaces['summary']
 
 fields_predicates = info.model('Predicates', {
     'json': fields.List(fields.List(fields.String), example=[
@@ -141,10 +144,9 @@ class Info(Resource):
         info_obj = {
             "title": "LamAPI",
             "description": "This is an API which retrieves data about entities in different Knowledge Graphs and performs entity linking task.",
-            "termsOfService": "http://example.com/terms/",
             "contact": {
-                "name": "Insid&s Lab",
-                "email": "r.avogadro@campus.unimib.it"
+                "organization": "SINTEF, Oslo, Norway",
+                "email": "roberto.avogadro@sintef.no"
             },
             "license": {
                 "name": "Apache 2.0",
@@ -538,4 +540,64 @@ class NERAnalysis(BaseEndpoint):
                 return ner_recognition.recognize_entities(data)
             else:
                 build_error("Invalid Data", 400)
-                
+
+
+
+@summary.route('/')
+@api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
+    params={
+        "kg": "The Knowledge Graph to query. Values: 'wikidata'. Default is 'wikidata'.",
+        "data_type": "Type of data to retrieve. Values: 'objects' or 'literals'.",
+        "rank_order": "Order of the results based on rank of predicates. Values: 'desc' or 'asc'.",
+        "k": "Number of elements to return when ordering by rank. Default is 10.",
+        "token": "Private token to access the API."
+    },
+    description="Returns the summary of the specified Knowledge Graph with optional ordering by rank of predicates."
+)
+class Summary(BaseEndpoint):
+    def get(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('kg', type=str, location="args", default='wikidata')
+        parser.add_argument('data_type', type=str, location="args", default='objects')
+        parser.add_argument('rank_order', type=str, location="args")
+        parser.add_argument('k', type=int, location="args")
+        parser.add_argument('token', type=str, location="args")
+        args = parser.parse_args()
+
+        kg = args["kg"]
+        data_type = args["data_type"]
+        rank_order = args["rank_order"]
+        k = args["k"]
+        token = args["token"]
+
+        # Validate token
+        token_is_valid, token_error = params_validator.validate_token(token)
+        if not token_is_valid:
+            return token_error
+
+        # Validate KG
+        kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
+        if not kg_is_valid:
+            return build_error("Invalid KG. Use 'wikidata'", 400)
+
+        # Validate rank order
+        if rank_order and rank_order not in ['asc', 'desc']:
+            return build_error("Invalid rank order. Use 'asc' or 'desc'.", 400)
+
+        # If k is not provided, use default value
+        k = k if k is not None else 10
+
+        # Implement the logic to retrieve Wikidata or DBpedia summary based on parameters
+        if data_type == 'objects':
+            results = summary_retriever.get_objects_summary(kg=kg_error_or_value, rank_order='desc', k=k)
+        elif data_type == 'literals':
+            results = summary_retriever.get_literals_summary(kg=kg_error_or_value, rank_order='desc', k=k)
+
+        else:
+            return build_error("Invalid data type. Use 'objects' or 'literals'.", 400)
+
+        return results
+
+
+    

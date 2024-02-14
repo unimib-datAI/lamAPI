@@ -3,32 +3,48 @@ import os
 from pymongo import MongoClient
 import time
 
- # Initialize the MongoDB client with the URI
-MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
-MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
-MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
-client = MongoClient(MONGO_ENDPOINT, int(MONGO_ENDPOINT_PORT), username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
+def get_mongo_client():
+    try:
+        mongo_endpoint, mongo_endpoint_port = os.environ["MONGO_ENDPOINT"].split(":")
+        mongo_endpoint_username = os.environ["MONGO_INITDB_ROOT_USERNAME"]
+        mongo_endpoint_password = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
+    except KeyError as e:
+        sys.exit(f"Environment variable {str(e)} not set.")
+    
+    return MongoClient(mongo_endpoint, int(mongo_endpoint_port), username=mongo_endpoint_username, password=mongo_endpoint_password)
+
+client = get_mongo_client()
 
 def fetch_predicate_labels(predicate_ids, collection):
-    predicates = collection.find({"entity": {"$in": predicate_ids}})
-    
-    # Mapping predicate IDs to labels
-    predicate_labels = {}
-    for predicate in predicates:
-        # Assuming you want to use the English label ('en'), adjust as necessary
-        label = predicate.get('labels', {}).get('en', '')
-        if label:
-            predicate_labels[predicate['entity']] = label
-    
+    predicates = collection.find({"entity": {"$in": predicate_ids}}, {"entity": 1, "labels.en": 1})
+    predicate_labels = {predicate["entity"]: predicate.get("labels", {}).get("en", "Unknown Label") for predicate in predicates}
     return predicate_labels
 
-
-def compute_and_store_summary(db_name, collection_name):
-    # Access the database and collection
+def enhance_and_store_results(db_name, collection_name, summary_collection_name, pipeline, label_resolver_collection):
     db = client[db_name]
     collection = db[collection_name]
+    results = collection.aggregate(pipeline)
+    aggregated_results = list(results)
+    
+    unique_predicates = {result['_id'] for result in aggregated_results} if collection_name == "objects" else \
+                         {result['_id']['predicate'] for result in aggregated_results}
+    
+    predicate_labels = fetch_predicate_labels(list(unique_predicates), db[label_resolver_collection])
+    
+    enhanced_results = [{
+        'literalType': result['_id']['literalType'] if collection_name != "objects" else None,
+        'predicate': result['_id']['predicate'] if collection_name != "objects" else result['_id'],
+        'label': predicate_labels.get(result['_id']['predicate'] if collection_name != "objects" else result['_id'], "Unknown Label"),
+        'count': result['count']
+    } for result in aggregated_results]
+    
+    summary_collection = db[summary_collection_name]
+    summary_collection.insert_many(enhanced_results)
+    summary_collection.create_index([("count", -1)])
 
-    pipeline = [
+def main(db_name):
+    start_time_objects = time.time()
+    pipeline_objects = [
         { "$project": {
             "relationPairs": {
                 "$objectToArray": "$objects"
@@ -44,39 +60,13 @@ def compute_and_store_summary(db_name, collection_name):
         },
         { "$sort": { "count": -1 } }
     ]
+    enhance_and_store_results(db_name, "objects", "objectsSummary", pipeline_objects, "items")
 
-    cursor = collection.aggregate(pipeline)
-    aggregated_results = []
-    for doc in cursor:
-        aggregated_results.append(doc)
+    end_time_objects = time.time()
+    print(f"Time taken for objects: {end_time_objects - start_time_objects} seconds")
 
-    # Extract unique predicate IDs
-    unique_predicates = list({result['_id'] for result in aggregated_results})
-    # Fetch labels for the unique predicates
-    predicate_labels = fetch_predicate_labels(unique_predicates, collection)
-
-    # Example of enhancing aggregated results with labels
-    enhanced_results = []
-    for result in aggregated_results:
-        predicate_id = result['_id']
-        label = predicate_labels.get(predicate_id, "Unknown Label")  # Default to "Unknown Label" if not found
-        enhanced_result = {
-            'predicate': predicate_id,
-            'label': label,
-            'count': result['count']
-        }
-        enhanced_results.append(enhanced_result)
-
-    # Store the enhanced results in a new collection
-    db["summaryObjects"].insert_many(enhanced_results)
-
-
-def compute_and_store_literals_summary(db_name, collection_name):
-    # Access the database and collection
-    db = client[db_name]
-    collection = db[collection_name]
-
-    pipeline = [
+    start_time_literals = time.time()
+    pipeline_literals = [
         {
             "$project": {
                 "literals": {"$objectToArray": "$literals"}
@@ -98,50 +88,14 @@ def compute_and_store_literals_summary(db_name, collection_name):
         }},
         {"$sort": {"count": -1}}
     ]
+    enhance_and_store_results(db_name, "literals", "literalsSummary", pipeline_literals, "items")
 
-    results = collection.aggregate(pipeline)
-    aggregated_results = []
-    for result in results:
-        aggregated_results.append(result)
-
-    # Extract unique predicate IDs
-    unique_predicates = list({result['_id']['predicate'] for result in aggregated_results})
-
-    # Fetch labels for the unique predicates
-    predicate_labels = fetch_predicate_labels(unique_predicates, collection)
-
-    # Example of enhancing aggregated results with labels
-    enhanced_results = []
-    for result in aggregated_results:
-        predicate_id = result['_id']['predicate']
-        label = predicate_labels.get(predicate_id, "Unknown Label")  # Default to "Unknown Label" if not found
-        enhanced_result = {
-            'literalType': result['_id']['literalType'],
-            'predicate': predicate_id,
-            'label': label,
-            'count': result['count']
-        }
-        enhanced_results.append(enhanced_result)
-
-    # Store the enhanced results in a new collection
-    db["summaryLiterals"].insert_many(enhanced_results)
-
-
+    end_time_literals = time.time()
+    print(f"Time taken for literals: {end_time_literals - start_time_literals} seconds")
 
 if __name__ == "__main__":
-    try:
-        db_name = sys.argv[1:][0]
-    except:
-        sys.exit("Please provide a DB name as argument")
-
-    start_time_objects = time.time()
-    compute_and_store_summary(db_name, "objects")
-    end_time_objects = time.time()
-    objects_duration = end_time_objects - start_time_objects
-    print(f"Time taken for objects: {objects_duration} seconds")
-
-    start_time_literals = time.time()
-    compute_and_store_literals_summary(db_name, "literals")
-    end_time_literals = time.time()
-    literals_duration = end_time_literals - start_time_literals
-    print(f"Time taken for literals: {literals_duration} seconds")
+    if len(sys.argv) > 1:
+        db_name = sys.argv[1]
+        main(db_name)
+    else:
+        sys.exit("Please provide a DB name as an argument.")
