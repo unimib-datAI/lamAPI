@@ -28,21 +28,24 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
     
     batch_size = 1000
     buffer = []
-    id_predicates = [] 
+    id_predicates = []
+    norm_factor = sum([result['count'] for result in aggregated_results])
     for result in aggregated_results:
         if collection_name == "objects":
             id_predicates.append(result['_id'])
             buffer.append({
                 "predicate": result['_id'],
                 "label": None,
-                "count": result['count']
+                "count": result['count'],
+                "countNorm": round(result['count'] / norm_factor, 2)
             })
         else:
             id_predicates.append(result['_id']['predicate'])
             buffer.append({
                 "predicate": result['_id']['predicate'],
                 "label": None,
-                "count": result['count']
+                "count": result['count'],
+                "countNorm": round(result['count'] / norm_factor, 2)
             })    
 
         if len(buffer) == batch_size:
@@ -64,16 +67,8 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
         buffer = []
         id_predicates = []        
 
-    enhanced_results = [{
-        'literalType': result['_id']['literalType'] if collection_name != "objects" else None,
-        'predicate': result['_id']['predicate'] if collection_name != "objects" else result['_id'],
-        'label': predicate_labels.get(result['_id']['predicate'] if collection_name != "objects" else result['_id'], "Unknown Label"),
-        'count': result['count']
-    } for result in aggregated_results]
-    
-    summary_collection = db[summary_collection_name]
-    summary_collection.insert_many(enhanced_results)
     summary_collection.create_index([("count", -1)])
+    
 
 def main(db_name):
     start_time_objects = time.time()
