@@ -1,5 +1,6 @@
 import sys
 import os
+import statistics
 from pymongo import MongoClient
 import time
 
@@ -29,7 +30,13 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
     batch_size = 1000
     buffer = []
     id_predicates = []
-    norm_factor = sum([result['count'] for result in aggregated_results])
+    distribution = [result['count'] for result in aggregated_results]
+    distribution_mean = statistics.mean(distribution)
+    distribution_stdev = statistics.stdev(distribution)
+    distribution_max = max(distribution)
+    distribution_min = min(distribution)
+    distribution_sum = sum(distribution)
+
     for result in aggregated_results:
         if collection_name == "objects":
             id_predicates.append(result['_id'])
@@ -37,7 +44,10 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
                 "predicate": result['_id'],
                 "label": None,
                 "count": result['count'],
-                "countNorm": round(result['count'] / norm_factor, 2)
+                "countNormSumAll": round(result['count'] / distribution_sum, 2),
+                "countNormMax": round(result['count'] / distribution_max, 2),
+                "countNormMinMax": round((result['count'] - distribution_min) / (distribution_max - distribution_min), 2),
+                "countNormZScore": round((result['count'] - distribution_mean) / distribution_stdev, 2)
             })
         else:
             id_predicates.append(result['_id']['predicate'])
@@ -45,7 +55,10 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
                 "predicate": result['_id']['predicate'],
                 "label": None,
                 "count": result['count'],
-                "countNorm": round(result['count'] / norm_factor, 2)
+                "countNormSumAll": round(result['count'] / distribution_sum, 2),
+                "countNormMax": round(result['count'] / distribution_max, 2),
+                "countNormMinMax": round((result['count'] - distribution_min) / (distribution_max - distribution_min), 2),
+                "countNormZScore": round((result['count'] - distribution_mean) / distribution_stdev, 2)
             })    
 
         if len(buffer) == batch_size:
