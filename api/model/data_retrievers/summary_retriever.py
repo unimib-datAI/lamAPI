@@ -11,17 +11,13 @@ class SummaryRetriever:
             query = {'entity': {'$in': entities}} if entities else {}
             
             # Apply ordering and limit if specified
-            cursor = collection.find(query, {"_id": 0})
-            print("result", list(cursor), flush=True)
-            if rank_order:
-                cursor = cursor.sort("count", -1 if rank_order == "desc" else 1)
-            if k:
-                cursor = cursor.limit(k)
-        collection = self.database.get_requested_collection(collection_name, kg)
-        cursor = collection.find(query, {"_id": 0})
-        print("result", list(cursor), flush=True)        
-        return list(cursor)
-
+            cursor = collection.find(query, {"_id": 0}).sort("count", -1 if rank_order == "desc" else 1).limit(k)
+            #print("result", list(cursor), flush=True)
+            
+            return list(cursor)
+        
+        return []
+    
     def get_objects_summary(self, entities=[], kg="wikidata", rank_order='desc', k=10):
         return self.get_summary("objects", entities, kg, rank_order, k)
 

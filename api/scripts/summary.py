@@ -26,11 +26,44 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
     results = collection.aggregate(pipeline)
     aggregated_results = list(results)
     
-    unique_predicates = {result['_id'] for result in aggregated_results} if collection_name == "objects" else \
-                         {result['_id']['predicate'] for result in aggregated_results}
-    
-    predicate_labels = fetch_predicate_labels(list(unique_predicates), db[label_resolver_collection])
-    
+    batch_size = 1000
+    buffer = []
+    id_predicates = [] 
+    for result in aggregated_results:
+        if collection_name == "objects":
+            id_predicates.append(result['_id'])
+            buffer.append({
+                "predicate": result['_id'],
+                "label": None,
+                "count": result['count']
+            })
+        else:
+            id_predicates.append(result['_id']['predicate'])
+            buffer.append({
+                "predicate": result['_id']['predicate'],
+                "label": None,
+                "count": result['count']
+            })    
+
+        if len(buffer) == batch_size:
+            predicate_labels = fetch_predicate_labels(id_predicates, db[label_resolver_collection])
+            for i, item in enumerate(buffer):
+                item['label'] = predicate_labels.get(id_predicates[i], "Unknown Label")
+            summary_collection = db[summary_collection_name]
+            summary_collection.insert_many(buffer)
+            buffer = []
+            id_predicates = []
+
+
+    if len(buffer) > 0:
+        predicate_labels = fetch_predicate_labels(id_predicates, db[label_resolver_collection])
+        for i, item in enumerate(buffer):
+            item['label'] = predicate_labels.get(id_predicates[i], "Unknown Label")
+        summary_collection = db[summary_collection_name]
+        summary_collection.insert_many(buffer)
+        buffer = []
+        id_predicates = []        
+
     enhanced_results = [{
         'literalType': result['_id']['literalType'] if collection_name != "objects" else None,
         'predicate': result['_id']['predicate'] if collection_name != "objects" else result['_id'],
