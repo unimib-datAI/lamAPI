@@ -77,7 +77,6 @@ def compute_and_store_literals_summary(db_name, collection_name):
     collection = db[collection_name]
 
     pipeline = [
-        { "$limit": 1000000 },
         {
             "$project": {
                 "literals": {"$objectToArray": "$literals"}
