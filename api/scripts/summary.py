@@ -1,5 +1,6 @@
 import sys
 import os
+import statistics
 from pymongo import MongoClient
 import time
 
@@ -28,21 +29,36 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
     
     batch_size = 1000
     buffer = []
-    id_predicates = [] 
+    id_predicates = []
+    distribution = [result['count'] for result in aggregated_results]
+    distribution_mean = statistics.mean(distribution)
+    distribution_stdev = statistics.stdev(distribution)
+    distribution_max = max(distribution)
+    distribution_min = min(distribution)
+    distribution_sum = sum(distribution)
+
     for result in aggregated_results:
         if collection_name == "objects":
             id_predicates.append(result['_id'])
             buffer.append({
                 "predicate": result['_id'],
                 "label": None,
-                "count": result['count']
+                "count": result['count'],
+                "countNormSumAll": round(result['count'] / distribution_sum, 2),
+                "countNormMax": round(result['count'] / distribution_max, 2),
+                "countNormMinMax": round((result['count'] - distribution_min) / (distribution_max - distribution_min), 2),
+                "countNormZScore": round((result['count'] - distribution_mean) / distribution_stdev, 2)
             })
         else:
             id_predicates.append(result['_id']['predicate'])
             buffer.append({
                 "predicate": result['_id']['predicate'],
                 "label": None,
-                "count": result['count']
+                "count": result['count'],
+                "countNormSumAll": round(result['count'] / distribution_sum, 2),
+                "countNormMax": round(result['count'] / distribution_max, 2),
+                "countNormMinMax": round((result['count'] - distribution_min) / (distribution_max - distribution_min), 2),
+                "countNormZScore": round((result['count'] - distribution_mean) / distribution_stdev, 2)
             })    
 
         if len(buffer) == batch_size:
@@ -64,16 +80,8 @@ def enhance_and_store_results(db_name, collection_name, summary_collection_name,
         buffer = []
         id_predicates = []        
 
-    enhanced_results = [{
-        'literalType': result['_id']['literalType'] if collection_name != "objects" else None,
-        'predicate': result['_id']['predicate'] if collection_name != "objects" else result['_id'],
-        'label': predicate_labels.get(result['_id']['predicate'] if collection_name != "objects" else result['_id'], "Unknown Label"),
-        'count': result['count']
-    } for result in aggregated_results]
-    
-    summary_collection = db[summary_collection_name]
-    summary_collection.insert_many(enhanced_results)
     summary_collection.create_index([("count", -1)])
+    
 
 def main(db_name):
     start_time_objects = time.time()
