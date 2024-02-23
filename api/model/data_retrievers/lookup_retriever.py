@@ -153,12 +153,21 @@ class LookupRetriever:
 
         return final_result
 
-    def create_query(self, name, fuzzy = False, types = None):
-
+    def create_query(self, name, fuzzy=False, types=None):
         splitted_name = name.split(" ")
         
         # base query
-        query_base = {"query": {"bool": {"should": [{"rank_feature": {"field": "popularity", "boost": 2}}], "must": []}}}
+        query_base = {
+            "query": {
+                "bool": {
+                    "should": [],
+                    "must": []
+                }
+            },
+            "sort": [
+                {"popularity": {"order": "desc"}}
+            ]
+        }
 
         # add ntoken
         query_base["query"]["bool"]["must"].append({"range": {"ntoken": {"gte": len(splitted_name) - 3, "lte": len(splitted_name) + 3}}})
@@ -176,10 +185,6 @@ class LookupRetriever:
         
         return query_base
 
-    def create_ids_query(self, name, ids):
-        query = {"query":{"bool":{"should":[{"match":{"name":name}},{"match":{"id":{"query": ids, "boost":2.0}}}]}}}
-
-        return query
 
     def create_token_query(self, name):
         query = {"query":{"match":{"name": name}}}
