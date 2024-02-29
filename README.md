@@ -79,22 +79,12 @@ Unzip the data dump using the command:
 
 
 #### Data Import
+    ```sh
+    docker exec -it lamapi_mongo bash -c 'cd /data/my-data && mongorestore --gzip --host=localhost --port=27017 --username="$MONGO_INITDB_ROOT_USERNAME" --password="$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase=admin --nsInclude=wikidata30062023.* <DIRECTORY_THAT_CONTAINS_THE_DUMP>'
 
-Import the decompressed data into MongoDB by executing:
+    
 
-    docker exec -it lamapi_mongo bash \\
-    cd /data/my-data \\
-    mongorestore \\
-    --gzip \\
-    --host=localhost \\ 
-    --port=$MONGO_PORT \\
-    --username=$MONGO_INITDB_ROOT_USERNAME \\ 
-    --password=$MONGO_INITDB_ROOT_PASSWORD \\
-    --authenticationDatabase=admin --nsFrom='.bson.gz' \\
-    --nsTo='wikidata30062023.' \\
-    <DIRECTORY THAT CONTAINS THE DUMP>
-
-
+    
 ### Elasticsearch Indexing
 
 To create the Elasticsearch index, follow these steps:
