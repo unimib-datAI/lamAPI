@@ -295,10 +295,13 @@ class Objects(BaseEndpoint):
         elif not kg_is_valid:
             return kg_error_or_value
         else:
+            print("objects", data, flush=True)
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
+                print("objects valid", data, flush=True)
                 return objects_retriever.get_objects_output(data, kg_error_or_value)
             else:
+                print("objects invalid", data, flush=True)
                 return build_error("Invalid Data", 400, traceback=traceback.format_exc())
 
 
