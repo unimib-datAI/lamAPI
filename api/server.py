@@ -299,7 +299,7 @@ class Objects(BaseEndpoint):
             if is_data_valid:
                 return objects_retriever.get_objects_output(data, kg_error_or_value)
             else:
-                return build_error("Invalid Data", 400)
+                return build_error("Invalid Data", 400, traceback=traceback.format_exc())
 
 
 @entity.route('/predicates')
