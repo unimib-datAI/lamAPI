@@ -297,7 +297,6 @@ class Objects(BaseEndpoint):
         else:
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
-                print("objects valid", data, flush=True)
                 return objects_retriever.get_objects_output(data, kg_error_or_value)
             else:
                 print("objects invalid", data, flush=True)
