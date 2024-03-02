@@ -295,7 +295,6 @@ class Objects(BaseEndpoint):
         elif not kg_is_valid:
             return kg_error_or_value
         else:
-            print("objects", data, flush=True)
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
                 print("objects valid", data, flush=True)
