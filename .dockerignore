@@ -1,0 +1,17 @@
+# Ignore local volume directories
+mongo-data/
+certs/
+esdata01/
+esdata02/
+esdata03/
+kibanadata/
+
+# Ignore data mounted from the host
+/my-data/
+
+# Additionally, ignore other common unnecessary files
+**/__pycache__
+**/.git
+*.log
+.tmp
+.DS_Store
