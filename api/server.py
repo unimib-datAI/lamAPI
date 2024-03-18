@@ -301,7 +301,10 @@ class Objects(BaseEndpoint):
         else:
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
-                return objects_retriever.get_objects_output(data, kg_error_or_value)
+                try:
+                    return objects_retriever.get_objects_output(data, kg_error_or_value)
+                except Exception:
+                    print(traceback.format_exc())
             else:
                 print("objects invalid", data, flush=True)
                 return build_error("Invalid Data", 400, traceback=traceback.format_exc())
