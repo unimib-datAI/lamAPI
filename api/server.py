@@ -303,7 +303,6 @@ class Objects(BaseEndpoint):
             if is_data_valid:
                 try:
                     result = objects_retriever.get_objects_output(data, kg_error_or_value)
-                    print(len(list(result.values())), flush=True)
                     return result
                 except Exception:
                     print(traceback.format_exc())
