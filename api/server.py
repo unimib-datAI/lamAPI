@@ -1,5 +1,6 @@
 import json
 import traceback
+import logging
 from flask import Flask, request
 from flask_restx import Api, Resource, fields, reqparse
 from model.data_retrievers.column_analysis import ColumnAnalysis
@@ -42,6 +43,9 @@ def init_services():
     with open('data.txt') as f:
         description = f.read()
     app = Flask("LamAPI")
+        # Configure logging
+    logging.basicConfig(level=logging.DEBUG)
+    app.logger.setLevel(logging.DEBUG)
     api = Api(app, version='1.0', title='LamAPI', description=description)
 
     namespaces = {
