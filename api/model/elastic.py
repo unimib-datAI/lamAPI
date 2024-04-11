@@ -35,6 +35,7 @@ def fetch_fingerprint_with_retry(max_retry=10, delay=10):
     while retry < max_retry:
         fingerprint = get_certificate_fingerprint()
         if fingerprint:
+            print("Fingerprint fetched successfully.", flush=True)
             return fingerprint
         else:
             print("Retrying...", flush=True)
