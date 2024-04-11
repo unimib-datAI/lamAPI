@@ -26,7 +26,7 @@ def get_certificate_fingerprint():
         fingerprint = output.decode("UTF-8").split("=")[1][0:-1]
         return fingerprint
     except Exception as e:
-        print("An error occurred:", e)
+        print("An error occurred:", e, flush=True)
         return None
 
 
@@ -37,13 +37,14 @@ def fetch_fingerprint_with_retry(max_retry=10, delay=10):
         if fingerprint:
             return fingerprint
         else:
-            print("Retrying...")
+            print("Retrying...", flush=True)
             retry += 1
             sleep(delay)
     return None
 
 
 # Fetch certificate fingerprint
+print("Fetching certificate fingerprint...", flush=True)
 CERT_FINGERPRINT = fetch_fingerprint_with_retry()
 
 class Elastic:
