@@ -30,7 +30,7 @@ def get_certificate_fingerprint():
         return None
 
 
-def fetch_fingerprint_with_retry(max_retry=3, delay=1):
+def fetch_fingerprint_with_retry(max_retry=10, delay=10):
     retry = 0
     while retry < max_retry:
         fingerprint = get_certificate_fingerprint()
@@ -42,20 +42,6 @@ def fetch_fingerprint_with_retry(max_retry=3, delay=1):
             sleep(delay)
     return None
 
-# Retry decorator function to handle Elasticsearch connection retries
-def retry(func):
-    def wrapper(*args, **kwargs):
-        max_retries = 10
-        retries = 0
-        while retries < max_retries:
-            try:
-                return func(*args, **kwargs)
-            except ConnectionError:
-                print("Elasticsearch is not ready. Retrying in 5 seconds...")
-                retries += 1
-                sleep(5)
-        raise Exception("Failed to connect to Elasticsearch after multiple retries.")
-    return wrapper
 
 # Fetch certificate fingerprint
 CERT_FINGERPRINT = fetch_fingerprint_with_retry()
