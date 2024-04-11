@@ -125,33 +125,6 @@ class LookupRetriever:
 
         return final_result
 
-    
-    def _exec_multi_query(self, labels, limit=100, kg = "wikidata", fuzzy = False, ngrams = False, types = None, ids = None):
-        if types is not None:
-            types = types.split(" ").sort()
-       
-        body = {"cell": {"$in": labels}, "type": types, "kg": kg, "fuzzy": fuzzy, "ngrams": ngrams, "limit": limit}
-        result = self.candidate_cache_collection.find(body)
-        final_result = {}
-        cell_buffer = []
-        ids = []
-        if result is not None:
-            for item in result:
-                final_result[item["cell"]] = item["candidates"]
-                cell_buffer.append(item["cell"])
-                ids.append(item["_id"])
-        
-        self.candidate_cache_collection.update_many(
-            {"_id": {"$in": ids}},
-            {"$set": { "lastAccessed": datetime.datetime.utcnow() }}
-        )
-
-        missing_cells = set(labels) - set(cell_buffer)
-        for cell in missing_cells:
-            query_result = self._exec_query(cell, limit = limit, kg = kg, fuzzy = fuzzy, ngrams = ngrams, types = types)
-            final_result[cell] = query_result[cell]
-
-        return final_result
 
     def create_query(self, name, fuzzy=False, types=None):
         splitted_name = name.split(" ")
