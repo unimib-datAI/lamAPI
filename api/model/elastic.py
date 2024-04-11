@@ -65,7 +65,6 @@ class Elastic:
         self._elastic = self.connect_to_elasticsearch()
         self._timeout = timeout
 
-    @retry  # Apply retry decorator to handle Elasticsearch connection retries
     def connect_to_elasticsearch(self):
         return Elasticsearch(
             hosts=f'https://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
