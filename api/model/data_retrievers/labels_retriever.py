@@ -20,8 +20,11 @@ class LabelsRetriever:
             final_result_wikidata = {}
             retrieved_wikidata_data = self.get_labels(entities, kg, category)
             for obj in retrieved_wikidata_data:
-                final_result_wikidata[obj['entity']] = {"url": self.database.get_url_kgs()[kg] + obj['entity']}
-                final_result_wikidata[obj['entity']]['description'] = obj['description'].get("value")
+                final_result_wikidata[obj['entity']] = {
+                    "category": obj['category'],  
+                    "url": self.database.get_url_kgs()[kg] + obj['entity'],
+                    "description": obj['description'].get("value")
+                }
                 if lang in obj["labels"]:
                     final_result_wikidata[obj['entity']]['labels'] = {}
                     final_result_wikidata[obj['entity']]['labels'][lang] = obj["labels"][lang]
