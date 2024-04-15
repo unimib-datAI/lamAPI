@@ -184,7 +184,8 @@ def parse_data(item, i):
             "aliases": all_aliases,
             "types": types,
             "popularity": popularity,
-            "category": category
+            "category": category,   # kind (entity, type or predicate)
+            "NERtype": None # (ORG, LOC, PER or OTHERS)
         },
         "objects": { 
             "id_entity": i,
