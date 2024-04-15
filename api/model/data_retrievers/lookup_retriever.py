@@ -36,16 +36,20 @@ class LookupRetriever:
             final_result = {label: final_result}
             return final_result
 
-        body = self.create_query(name = label, fuzzy = fuzzy, types = types)
+        body = self.create_query(name = label, fuzzy = fuzzy)
         history = {}
         final_result = {label: []}
         result = []
     
         result, _ = self.elastic_retriever.search(body, kg, limit)
 
+        if len(result) == 0:
+            body = self.create_query(name = label, fuzzy = True)
+            result, _ = self.elastic_retriever.search(body, kg, limit=500)
+
         if ids is not None:
             body = self.create_ids_query(name = label, ids=ids)
-            result2, _ = self.elastic_retriever.search(body, kg, 500)
+            result2, _ = self.elastic_retriever.search(body, kg, limit=500)
             result = result + result2
         
         mention_clean = clean_str(label)
@@ -126,15 +130,14 @@ class LookupRetriever:
         return final_result
 
 
-    def create_query(self, name, fuzzy=False, types=None):
+    def create_query(self, name, fuzzy=False):
         splitted_name = name.split(" ")
         
         # base query
         query_base = {
             "query": {
                 "bool": {
-                    "should": [],
-                    "must": []
+                    "must": [],
                 }
             },
             "sort": [
@@ -146,20 +149,12 @@ class LookupRetriever:
         query_base["query"]["bool"]["must"].append({"range": {"ntoken": {"gte": len(splitted_name) - 3, "lte": len(splitted_name) + 3}}})
         
         # add token
-        query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name, "boost": 2}}})
+        query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "boost": 2}}})
 
         # add fuzzy
         if fuzzy:
-            query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
-
-        # add types constraint
-        if types is not None:
-            query_base["query"]["bool"]["should"].append({"match": {"type": types}})
+            query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
+        else:
+            query_base["query"]["bool"]["must"].append({"match": {"name": name}})
         
         return query_base
-
-
-    def create_token_query(self, name):
-        query = {"query":{"match":{"name": name}}}
-
-        return query
