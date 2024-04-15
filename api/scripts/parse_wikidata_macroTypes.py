@@ -212,53 +212,12 @@ with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
                     
             ################################################################   
 
+
             ################################################################   
             # URL EXTRACTION
 
-            def get_linksfromWikidata(WD_id, entry,collection):
-                """ get links to other Databases from dumo
-
-                :param WD_id: Wikidata id of enity <class 'string'>
-                :param entry: entity object <class 'dict'>
-                :param collection: collection to search in
-                :return: entry <class 'dict'>
-                """
-                entry_org = collection.find_one({"id":WD_id})
-                if entry_org:
-                    if "P345" in entry_org["claims"]:
-                        mainsnak=entry_org["claims"]["P345"][0]["mainsnak"]
-                        if mainsnak["snaktype"] == "value":
-                            entry["IMDB_id"] = mainsnak["datavalue"]["value"]
-                        else:
-                            print(entry["WD_id"], "P345 value missing")
-                    if "P434" in entry_org["claims"]:
-                        mainsnak=entry_org["claims"]["P434"][0]["mainsnak"]
-                        if mainsnak["snaktype"] == "value":
-                            entry["MusicBrainzArtist_id"] = mainsnak["datavalue"]["value"]
-                        else:
-                            print(entry["WD_id"], "P434 value missing")
-                    if "P227" in entry_org["claims"]:
-                        mainsnak=entry_org["claims"]["P227"][0]["mainsnak"]
-                        if mainsnak["snaktype"] == "value":
-                            entry["GND_id"] = mainsnak["datavalue"]["value"]
-                        else:
-                            print( entry["WD_id"], "P227 value missing")
-                    if "P1566" in entry_org["claims"]:
-                        mainsnak=entry_org["claims"]["P1566"][0]["mainsnak"]
-                        if mainsnak["snaktype"] == "value":
-                            entry["geonames_id"]= mainsnak["datavalue"]["value"]
-                        else:
-                            print(entry["WD_id"], "P1566 value missing")
-                    if "P402" in entry_org["claims"]:
-                        mainsnak=entry_org["claims"]["P402"][0]["mainsnak"]
-                        if mainsnak["snaktype"] == "value":
-                            entry["OSM_id"] = mainsnak["datavalue"]["value"]
-                        else:
-                            print(entry["WD_id"], "P402 value missing")
-                return entry
-
-
             wikidata_dump_path = './my-data/latest-all.json.bz2'
+
             with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
                 count = 0
                 
@@ -279,18 +238,17 @@ with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
 
                         entry["WD_id_URL"] = "http://www.wikidata.org/wiki/"+entry["WD_id"]
                         entry["WP_id_URL"] = "http://"+lang+".wikipedia.org/wiki/"+entry["WP_id"].replace(" ","_")
-                        entry["dbpedia_URL"] = "http://dbpedia.org/resource/"+entry["WP_id"].replace(" ","_")
+                        entry["dbpedia_URL"] = "http://dbpedia.org/resource/"+entry["WP_id"].capitalize().replace(" ","_")
+                        
                         print("------------------")
                         print(entry["WD_id_URL"])
                         print(entry["WP_id_URL"])
                         print(entry["dbpedia_URL"])
-                    
-                        # Process each entity
                         print("------------------")
-                        continue
                 
                     except json.decoder.JSONDecodeError:
                         continue
+            
             ################################################################    
             
            
