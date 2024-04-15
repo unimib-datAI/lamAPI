@@ -151,13 +151,10 @@ class LookupRetriever:
         # add ntoken
         query_base["query"]["bool"]["must"].append({"range": {"ntoken": {"gte": len(splitted_name) - 3, "lte": len(splitted_name) + 3}}})
         
-        # add token
-        query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "boost": 2}}})
-
         # add fuzzy
         if fuzzy:
             query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
         else:
-            query_base["query"]["bool"]["must"].append({"match": {"name": name}})
+            query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "boost": 2}}}) # add token (normal query)
         
         return query_base
