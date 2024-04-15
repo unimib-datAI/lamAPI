@@ -129,7 +129,10 @@ class LookupRetriever:
 
         return final_result
 
-
+    def create_token_query(self, name):
+        query = {"query":{"match":{"name": name}}}
+        return query
+    
     def create_query(self, name, fuzzy=False):
         splitted_name = name.split(" ")
         
