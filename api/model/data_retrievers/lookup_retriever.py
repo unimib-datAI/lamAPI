@@ -37,7 +37,6 @@ class LookupRetriever:
             return final_result
 
         query = self.create_query(name = label, fuzzy = fuzzy)
-        history = {}
         final_result = {label: []}
         result = []
     
@@ -45,7 +44,7 @@ class LookupRetriever:
 
         if len(result) == 0:
             query = self.create_query(name = label, fuzzy = True)
-            result, _ = self.elastic_retriever.search(query, kg, limit=500)
+            result, _ = self.elastic_retriever.search(query, kg, limit=1000)
 
         if ids is not None:
             query = self.create_ids_query(name = label, ids=ids)
@@ -80,6 +79,7 @@ class LookupRetriever:
         results = items_collection.find({"category": "type", "entity": {"$in": ids}})
         types_id_to_name = {result["entity"]:result["labels"].get("en") for result in results}
 
+        history = {}
         for entity in result:
             id_entity = entity["id"]
             label_clean = clean_str(entity["name"])
