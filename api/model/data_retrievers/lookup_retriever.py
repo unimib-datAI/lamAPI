@@ -36,20 +36,20 @@ class LookupRetriever:
             final_result = {label: final_result}
             return final_result
 
-        body = self.create_query(name = label, fuzzy = fuzzy)
+        query = self.create_query(name = label, fuzzy = fuzzy)
         history = {}
         final_result = {label: []}
         result = []
     
-        result, _ = self.elastic_retriever.search(body, kg, limit)
+        result, _ = self.elastic_retriever.search(query, kg, limit)
 
         if len(result) == 0:
-            body = self.create_query(name = label, fuzzy = True)
-            result, _ = self.elastic_retriever.search(body, kg, limit=500)
+            query = self.create_query(name = label, fuzzy = True)
+            result, _ = self.elastic_retriever.search(query, kg, limit=500)
 
         if ids is not None:
-            body = self.create_ids_query(name = label, ids=ids)
-            result2, _ = self.elastic_retriever.search(body, kg, limit=500)
+            query = self.create_ids_query(name = label, ids=ids)
+            result2, _ = self.elastic_retriever.search(query, kg, limit=500)
             result = result + result2
         
         mention_clean = clean_str(label)
@@ -58,8 +58,8 @@ class LookupRetriever:
    
         
 
-        body = self.create_token_query(name=label)
-        result_to_discard, _ = self.elastic_retriever.search(body, kg, limit)
+        query_token = self.create_token_query(name=label)
+        result_to_discard, _ = self.elastic_retriever.search(query_token, kg, limit)
         ambiguity_mention, corrects_tokens = (0, 0)
         history_labels, tokens_set = (set(), set())
         for entity in result_to_discard:
@@ -122,7 +122,7 @@ class LookupRetriever:
                 "lastAccessed": datetime.datetime.utcnow(),
                 "fuzzy": fuzzy,
                 "limit": limit,
-                "query": body
+                "query": query
             })
         except:
             pass    
