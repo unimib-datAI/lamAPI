@@ -6,6 +6,7 @@ import traceback
 from pymongo import MongoClient
 from tqdm import tqdm
 from datetime import datetime
+from requests import get
 
 
 def create_indexes(db):
@@ -141,8 +142,50 @@ def flush_buffer(buffer):
             c_ref[key].insert_many(buffer[key])
             buffer[key] = []
             
+def get_wikidata_item_tree_item_idsSPARQL(root_items, forward_properties=None, backward_properties=None):
+    """Return ids of WikiData items, which are in the tree spanned by the given root items and claims relating them
+        to other items.
+
+    :param root_items: iterable[int] One or multiple item entities that are the root elements of the tree
+    :param forward_properties: iterable[int] | None property-claims to follow forward; that is, if root item R has
+        a claim P:I, and P is in the list, the search will branch recursively to item I as well.
+    :param backward_properties: iterable[int] | None property-claims to follow in reverse; that is, if (for a root
+        item R) an item I has a claim P:R, and P is in the list, the search will branch recursively to item I as well.
+    :return: iterable[int]: List with ids of WikiData items in the tree
+    """
+
+    query = '''PREFIX wikibase: <http://wikiba.se/ontology#>
+            PREFIX wd: <http://www.wikidata.org/entity/>
+            PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'''
+    if forward_properties:
+        query +='''SELECT ?WD_id WHERE {
+                  ?tree0 (wdt:P%s)* ?WD_id .
+                  BIND (wd:%s AS ?tree0)
+                  }'''%( ','.join(map(str, forward_properties)),','.join(map(str, root_items)))
+    elif backward_properties:
+        query+='''SELECT ?WD_id WHERE {
+                    ?WD_id (wdt:P%s)* wd:Q%s .
+                    }'''%(','.join(map(str, backward_properties)), ','.join(map(str, root_items)))
+    #print(query)
+
+    url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
+    data = get(url, params={'query': query, 'format': 'json'}).json()
+    
+    ids = []
+    for item in data['results']['bindings']:
+        this_id=item["WD_id"]["value"].split("/")[-1].lstrip("Q")
+        #print(item)
+        try:
+            this_id = int(this_id)
+            ids.append(this_id)
+            #print(this_id)
+        except ValueError:
+            #print("exception")
+            continue
+    return ids
             
-def parse_data(item, i):
+def parse_data(item, i, geolocation_subclass, organization_subclass):
     entity = item["id"]
     labels = item.get("labels", {})
     aliases = item.get("aliases", {})
@@ -172,6 +215,62 @@ def parse_data(item, i):
     if entity[0] == "P":
         category = "predicate"
 
+    ###############################################################
+    # ORGANIZATION EXTRACTION
+    # All items with the root class Organization (Q43229) excluding country (Q6256), city (Q515), capitals (Q5119), 
+    # administrative territorial entity of a single country (Q15916867), venue (Q17350442), sports league (Q623109) 
+    # and family (Q8436)
+    
+    # LOCATION EXTRACTION
+    # All items with the root class Geographic Location (Q2221906) excluding: food (Q2095), educational institution (Q2385804), 
+    # government agency (Q327333), international organization (Q484652) and time zone (Q12143)
+    
+    # PERSON EXTRACTION
+    # All items with the statement is instance of (P31) human (Q5) are classiﬁed as person.
+
+    NERtype = None
+
+    if item.get("type") == "item" and "claims" in item:
+        p31_claims = item["claims"].get("P31", [])
+        for claim in p31_claims:
+            mainsnak = claim.get("mainsnak", {})
+            datavalue = mainsnak.get("datavalue", {})
+            numeric_id = datavalue.get("value", {}).get("numeric-id")
+            if numeric_id in organization_subclass:
+                item["NERtype"] = "ORG"
+
+            elif numeric_id == 5:
+                NERtype = "PERS"
+                
+            elif numeric_id in geolocation_subclass:
+                NERtype = "LOC"
+                
+            else:
+                NERtype = "OTHERS"             
+                        
+    ################################################################
+
+    ################################################################   
+    # URL EXTRACTION
+
+    try:
+        lang = labels.get("en", {}).get("language", "")
+        url_dict={}
+        url_dict["WD_id"] = item['id']
+        url_dict["WP_id"] = labels.get("en", {}).get("value", "")
+
+        url_dict["WD_id_URL"] = "http://www.wikidata.org/wiki/"+url_dict["WD_id"]
+        url_dict["WP_id_URL"] = "http://"+lang+".wikipedia.org/wiki/"+url_dict["WP_id"].replace(" ","_")
+        url_dict["dbpedia_URL"] = "http://dbpedia.org/resource/"+url_dict["WP_id"].capitalize().replace(" ","_")
+        
+
+    except json.decoder.JSONDecodeError:
+       pass
+    
+    ################################################################    
+
+
+
     objects = {}
     literals = {datatype: {} for datatype in DATATYPES}
     types = {"P31": []}
@@ -185,7 +284,11 @@ def parse_data(item, i):
             "types": types,
             "popularity": popularity,
             "category": category,   # kind (entity, type or predicate)
-            "NERtype": None # (ORG, LOC, PER or OTHERS)
+            ######################
+            # new updates
+            "NERtype": NERtype, # (ORG, LOC, PER or OTHERS)
+            "URLs" : url_dict
+            ######################
         },
         "objects": { 
             "id_entity": i,
@@ -229,6 +332,8 @@ def parse_data(item, i):
                     lit[predicate] = []
                 lit[predicate].append(value)   
 
+     
+
     for key in buffer:
         buffer[key].append(join[key])            
 
@@ -238,6 +343,34 @@ def parse_data(item, i):
 
 def parse_wikidata_dump():            
     global initial_total_lines_estimate
+
+    try:
+        geolocation_subclass = get_wikidata_item_tree_item_idsSPARQL([2221906], backward_properties=[279])
+        food_subclass =  get_wikidata_item_tree_item_idsSPARQL([2095], backward_properties=[279])
+        edInst_subclass =  get_wikidata_item_tree_item_idsSPARQL([2385804], backward_properties=[279])
+        govAgency_subclass =  get_wikidata_item_tree_item_idsSPARQL([327333], backward_properties=[279])
+        intOrg_subclass =  get_wikidata_item_tree_item_idsSPARQL([484652], backward_properties=[279])
+        timeZone_subclass =  get_wikidata_item_tree_item_idsSPARQL([12143], backward_properties=[279])    
+        geolocation_subclass = list(set(geolocation_subclass)-set(food_subclass)-set(edInst_subclass)-set(govAgency_subclass)-
+                                set(intOrg_subclass)-set(timeZone_subclass))
+        
+        organization_subclass=get_wikidata_item_tree_item_idsSPARQL([43229], backward_properties=[279])    
+        country_subclass =  get_wikidata_item_tree_item_idsSPARQL([6256], backward_properties=[279])    
+        city_subclass =  get_wikidata_item_tree_item_idsSPARQL([515], backward_properties=[279])    
+        capitals_subclass =  get_wikidata_item_tree_item_idsSPARQL([5119], backward_properties=[279])
+
+        admTerr_subclass =  get_wikidata_item_tree_item_idsSPARQL([15916867], backward_properties=[279])
+
+        family_subclass =  get_wikidata_item_tree_item_idsSPARQL([17350442], backward_properties=[279])
+        sportLeague_subclass =  get_wikidata_item_tree_item_idsSPARQL([623109], backward_properties=[279])
+        venue_subclass =  get_wikidata_item_tree_item_idsSPARQL([8436], backward_properties=[279])
+        organization_subclass = list(set(organization_subclass)-set(country_subclass)-set(city_subclass)-
+                                set(capitals_subclass)-set(admTerr_subclass)-set(family_subclass) -
+                                set(sportLeague_subclass)-set(venue_subclass))
+        
+    except json.decoder.JSONDecodeError:
+        pass
+
     pbar = tqdm(total=initial_total_lines_estimate)
     for i, line in enumerate(file):
         try:
@@ -249,7 +382,7 @@ def parse_wikidata_dump():
             pbar.total = round(compressed_file_size / current_average_size)
             pbar.update(1)
 
-            parse_data(item, i)
+            parse_data(item, i, geolocation_subclass, organization_subclass)
         except json.decoder.JSONDecodeError:
             continue
         except Exception as e:
