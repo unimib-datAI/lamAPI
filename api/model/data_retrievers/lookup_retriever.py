@@ -48,7 +48,7 @@ class LookupRetriever:
 
         if ids is not None:
             query = self.create_ids_query(name = label, ids=ids)
-            result2, _ = self.elastic_retriever.search(query, kg, limit=500)
+            result2, _ = self.elastic_retriever.search(query, kg, limit=1000)
             result = result + result2
         
         mention_clean = clean_str(label)
