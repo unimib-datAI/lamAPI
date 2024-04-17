@@ -133,6 +133,28 @@ class LookupRetriever:
         query = {"query":{"match":{"name": name}}}
         return query
     
+    
+    def create_ids_query(self, name, ids):
+        splitted_name = name.split(" ")
+        # base query
+        query_base = {
+            "query": {
+                "bool": {
+                    "must": [],
+                }
+            },
+            "sort": [
+                {"popularity": {"order": "desc"}}
+            ]
+        }
+
+        # add ntoken
+        query_base["query"]["bool"]["must"].append({"range": {"ntoken": {"gte": len(splitted_name) - 3, "lte": len(splitted_name) + 3}}})
+        query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
+        query_base["query"]["bool"]["must"].append({"match": {"id": {"query": ids, "boost": 2.0}}})
+
+        return query_base
+
     def create_query(self, name, fuzzy=False):
         splitted_name = name.split(" ")
         
