@@ -145,7 +145,10 @@ def flush_buffer(buffer):
 def get_wikidata_item_tree_item_idsSPARQL(root_items, forward_properties=None, backward_properties=None):
     """Return ids of WikiData items, which are in the tree spanned by the given root items and claims relating them
         to other items.
-
+    --------------------------------------------
+    For example, if you have an item with types A, B, and C, and you specify a forward property that applies to type B, the item will 
+    be included in the result because it has type B, even if it also has types A and C
+    --------------------------------------------  
     :param root_items: iterable[int] One or multiple item entities that are the root elements of the tree
     :param forward_properties: iterable[int] | None property-claims to follow forward; that is, if root item R has
         a claim P:I, and P is in the list, the search will branch recursively to item I as well.
