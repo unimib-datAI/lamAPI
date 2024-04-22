@@ -235,21 +235,23 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
 
     if item.get("type") == "item" and "claims" in item:
         p31_claims = item["claims"].get("P31", [])
-        for claim in p31_claims:
-            mainsnak = claim.get("mainsnak", {})
-            datavalue = mainsnak.get("datavalue", {})
-            numeric_id = datavalue.get("value", {}).get("numeric-id")
-            if numeric_id in organization_subclass:
-                item["NERtype"] = "ORG"
-
-            elif numeric_id == 5:
-                NERtype = "PERS"
+        
+        if len(p31_claims) != 0:           
+            for claim in p31_claims:
+                mainsnak = claim.get("mainsnak", {})
+                datavalue = mainsnak.get("datavalue", {})
+                numeric_id = datavalue.get("value", {}).get("numeric-id")
                 
-            elif numeric_id in geolocation_subclass:
-                NERtype = "LOC"
-                
-            else:
-                NERtype = "OTHERS"             
+                if numeric_id == 5:
+                    NERtype = "PERS" 
+                elif numeric_id in geolocation_subclass or any(k.lower() in description.get('value', '').lower() for k in ["district", "city", "country", "capital"]):
+                    NERtype = "LOC"
+                elif numeric_id in organization_subclass:
+                    NERtype = "ORG"  
+                else:
+                    NERtype = "OTHERS"
+        else:
+            NERtype = "OTHERS"  
                         
     ################################################################
 
