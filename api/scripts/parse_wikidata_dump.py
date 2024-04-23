@@ -260,13 +260,14 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
 
     try:
         lang = labels.get("en", {}).get("language", "")
-        url_dict={}
-        url_dict["WD_id"] = item['id']
-        url_dict["WP_id"] = labels.get("en", {}).get("value", "")
+        tmp={}
+        tmp["WD_id"] = item['id']
+        tmp["WP_id"] = labels.get("en", {}).get("value", "")
 
-        url_dict["WD_id_URL"] = "http://www.wikidata.org/wiki/"+url_dict["WD_id"]
-        url_dict["WP_id_URL"] = "http://"+lang+".wikipedia.org/wiki/"+url_dict["WP_id"].replace(" ","_")
-        url_dict["dbpedia_URL"] = "http://dbpedia.org/resource/"+url_dict["WP_id"].capitalize().replace(" ","_")
+        url_dict={}
+        url_dict["wikidata"] = "http://www.wikidata.org/wiki/"+url_dict["WD_id"]
+        url_dict["wikipedia"] = "http://"+lang+".wikipedia.org/wiki/"+url_dict["WP_id"].replace(" ","_")
+        url_dict["dbpedia"] = "http://dbpedia.org/resource/"+url_dict["WP_id"].capitalize().replace(" ","_")
         
 
     except json.decoder.JSONDecodeError:
@@ -288,7 +289,7 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             "aliases": all_aliases,
             "types": types,
             "popularity": popularity,
-            "category": category,   # kind (entity, type or predicate)
+            "category": category,   # kind (entity, type or predicate, disambiguation or category)
             ######################
             # new updates
             "NERtype": NERtype, # (ORG, LOC, PER or OTHERS)
@@ -350,29 +351,99 @@ def parse_wikidata_dump():
     global initial_total_lines_estimate
 
     try:
+        organization_subclass = get_wikidata_item_tree_item_idsSPARQL([43229], backward_properties=[279])
+        #print(len(organization_subclass))
+    except json.decoder.JSONDecodeError:
+        pass
+    
+    try:
+        country_subclass = get_wikidata_item_tree_item_idsSPARQL([6256], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        country_subclass = set()
+        pass
+    
+    try:
+        city_subclass = get_wikidata_item_tree_item_idsSPARQL([515], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        city_subclass = set()
+        pass
+    
+    try:
+        capitals_subclass = get_wikidata_item_tree_item_idsSPARQL([5119], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        capitals_subclass = set()
+        pass
+    
+    try:
+        admTerr_subclass = get_wikidata_item_tree_item_idsSPARQL([15916867], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        admTerr_subclass = set()
+        pass
+    
+    try:
+        family_subclass = get_wikidata_item_tree_item_idsSPARQL([17350442], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        family_subclass = set()
+        pass
+    
+    try:
+        sportLeague_subclass = get_wikidata_item_tree_item_idsSPARQL([623109], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        sportLeague_subclass = set()
+        pass
+    
+    try:
+        venue_subclass = get_wikidata_item_tree_item_idsSPARQL([8436], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        venue_subclass = set()
+        pass
+        
+    try:
+        organization_subclass = list(set(organization_subclass) - set(country_subclass) - set(city_subclass) - set(capitals_subclass) - set(admTerr_subclass) - set(family_subclass) - set(sportLeague_subclass) - set(venue_subclass))
+        #print(len(organization_subclass))
+    except json.decoder.JSONDecodeError:
+        pass
+
+    
+    try:
         geolocation_subclass = get_wikidata_item_tree_item_idsSPARQL([2221906], backward_properties=[279])
-        food_subclass =  get_wikidata_item_tree_item_idsSPARQL([2095], backward_properties=[279])
-        edInst_subclass =  get_wikidata_item_tree_item_idsSPARQL([2385804], backward_properties=[279])
-        govAgency_subclass =  get_wikidata_item_tree_item_idsSPARQL([327333], backward_properties=[279])
-        intOrg_subclass =  get_wikidata_item_tree_item_idsSPARQL([484652], backward_properties=[279])
-        timeZone_subclass =  get_wikidata_item_tree_item_idsSPARQL([12143], backward_properties=[279])    
-        geolocation_subclass = list(set(geolocation_subclass)-set(food_subclass)-set(edInst_subclass)-set(govAgency_subclass)-
-                                set(intOrg_subclass)-set(timeZone_subclass))
-        
-        organization_subclass=get_wikidata_item_tree_item_idsSPARQL([43229], backward_properties=[279])    
-        country_subclass =  get_wikidata_item_tree_item_idsSPARQL([6256], backward_properties=[279])    
-        city_subclass =  get_wikidata_item_tree_item_idsSPARQL([515], backward_properties=[279])    
-        capitals_subclass =  get_wikidata_item_tree_item_idsSPARQL([5119], backward_properties=[279])
-
-        admTerr_subclass =  get_wikidata_item_tree_item_idsSPARQL([15916867], backward_properties=[279])
-
-        family_subclass =  get_wikidata_item_tree_item_idsSPARQL([17350442], backward_properties=[279])
-        sportLeague_subclass =  get_wikidata_item_tree_item_idsSPARQL([623109], backward_properties=[279])
-        venue_subclass =  get_wikidata_item_tree_item_idsSPARQL([8436], backward_properties=[279])
-        organization_subclass = list(set(organization_subclass)-set(country_subclass)-set(city_subclass)-
-                                set(capitals_subclass)-set(admTerr_subclass)-set(family_subclass) -
-                                set(sportLeague_subclass)-set(venue_subclass))
-        
+        #print(len(geolocation_subclass))
+    except json.decoder.JSONDecodeError:
+        pass
+    
+    try:
+        food_subclass = get_wikidata_item_tree_item_idsSPARQL([2095], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        food_subclass = set()
+        pass
+    
+    try:
+        edInst_subclass = get_wikidata_item_tree_item_idsSPARQL([2385804], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        edInst_subclass = set()
+        pass
+    
+    try:
+        govAgency_subclass = get_wikidata_item_tree_item_idsSPARQL([327333], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        govAgency_subclass = set()
+        pass
+    
+    try:
+        intOrg_subclass = get_wikidata_item_tree_item_idsSPARQL([484652], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        intOrg_subclass = set()
+        pass
+    
+    try:
+        timeZone_subclass = get_wikidata_item_tree_item_idsSPARQL([12143], backward_properties=[279])
+    except json.decoder.JSONDecodeError:
+        timeZone_subclass = set()
+        pass
+       
+    try:
+        geolocation_subclass = list(set(geolocation_subclass) - set(food_subclass) - set(edInst_subclass) - set(govAgency_subclass) - set(intOrg_subclass) - set(timeZone_subclass))
+        #print(len(geolocation_subclass))
     except json.decoder.JSONDecodeError:
         pass
 
