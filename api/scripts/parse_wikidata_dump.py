@@ -289,7 +289,7 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             "aliases": all_aliases,
             "types": types,
             "popularity": popularity,
-            "category": category,   # kind (entity, type or predicate, disambiguation or category)
+            "kind": category,   # kind (entity, type or predicate, disambiguation or category)
             ######################
             # new updates
             "NERtype": NERtype, # (ORG, LOC, PER or OTHERS)
