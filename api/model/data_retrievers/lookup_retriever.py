@@ -48,7 +48,7 @@ class LookupRetriever:
 
         if ids is not None:
             query = self.create_ids_query(name = label, ids=ids)
-            result2, _ = self.elastic_retriever.search(query, kg, limit=500)
+            result2, _ = self.elastic_retriever.search(query, kg, limit=1000)
             result = result + result2
         
         mention_clean = clean_str(label)
@@ -152,6 +152,7 @@ class LookupRetriever:
         # add ntoken
         query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name}}})
         query_base["query"]["bool"]["must"].append({"match": {"id": {"query": ids, "boost": 2.0}}})
+        return query_base
     
     def create_query(self, name, fuzzy=False):
         splitted_name = name.split(" ")
