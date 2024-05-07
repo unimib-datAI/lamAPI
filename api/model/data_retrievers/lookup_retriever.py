@@ -133,6 +133,26 @@ class LookupRetriever:
         query = {"query":{"match":{"name": name}}}
         return query
     
+
+    def create_ids_query(self, name, ids):
+        # base query
+        query_base = {
+            "query": {
+                "bool": {
+                    "should": [],
+                    "must": []
+
+                }
+            },
+            "sort": [
+                {"popularity": {"order": "desc"}}
+            ]
+        }
+
+        # add ntoken
+        query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name}}})
+        query_base["query"]["bool"]["must"].append({"match": {"id": {"query": ids, "boost": 2.0}}})
+    
     def create_query(self, name, fuzzy=False):
         splitted_name = name.split(" ")
         
