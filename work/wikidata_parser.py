@@ -290,13 +290,18 @@ if __name__ == "__main__":
                         all_aliases[lang].append(alias["value"])
                     all_aliases[lang] = list(set(all_aliases[lang]))
             
-                found = False
                 for predicate in item["claims"]:
                     if predicate == "P279":
-                        found = True
-            
-                if found:
-                    category = "type"
+                        category = "type"
+                        break
+                    if predicate == "P31":
+                        if 'Q4167410' == entity:
+                            category = "disambiguation"
+                            break
+                        elif 'Q4167836' == entity:
+                            category = "category"
+                            break
+
                 if entity[0] == "P":
                     category = "predicate"
         
