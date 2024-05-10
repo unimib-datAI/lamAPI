@@ -81,19 +81,6 @@ def get_wikidata_item_tree_item_idsSPARQL(root_items, forward_properties=None, b
             continue
     return ids
 
-json_file_path = "./def_mapping.json"
-
-try:
-    # Open the JSON file for reading
-    with open(json_file_path, 'r') as json_file:
-        mapping = json.load(json_file)
-        
-except FileNotFoundError:
-    print(f"Error: File '{json_file_path}' not found.")
-except json.JSONDecodeError as e:
-    print(f"Error decoding JSON data: {e}")
-except Exception as e:
-    print(f"Error loading data from JSON file: {e}")
 
 total_size_processed = 0
 num_entities_processed = 0
