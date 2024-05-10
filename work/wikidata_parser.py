@@ -7,15 +7,19 @@ import sys
 from pymongo import MongoClient
 from json.decoder import JSONDecodeError
 from requests import get
+from datetime import datetime
+
 
 # MongoDB connection setup
 MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
 MONGO_ENDPOINT_PORT = int(MONGO_ENDPOINT_PORT)
 MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
 MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
-DB_NAME = f"wikidata"
+current_date = datetime.now()
+formatted_date = current_date.strftime("%d%m%Y")
+DB_NAME = f"wikidata{formatted_date}"
 global initial_total_lines_estimate
-wikidata_dump_path = './my-data/latest-all.json.bz2'
+wikidata_dump_path = './data/latest-all.json.bz2'
 
 client = MongoClient(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT, username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
 print(client)
@@ -25,6 +29,13 @@ items_c = client[DB_NAME].items
 objects_c = client[DB_NAME].objects
 literals_c = client[DB_NAME].literals
 types_c = client[DB_NAME].types
+metadata_c = client[DB_NAME].metadata
+
+start_time_computation = datetime.now()    
+metadata_c.insert_one({
+   "start_time": start_time_computation,
+   "status": "DOING"  
+})
 
 c_ref = {
     "items": items_c,
@@ -252,12 +263,6 @@ if __name__ == "__main__":
 
     with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
         count = 1000
-        
-        ORG = []
-        PERS = []
-        LOC = []
-        OTHERS = []
-
         pbar = tqdm(total=initial_total_lines_estimate)
         for i, line in enumerate(f):
             try:
@@ -274,176 +279,159 @@ if __name__ == "__main__":
                 popularity = len(sitelinks) if len(sitelinks) > 0 else 1
 
                 
-                if entity in list(mapping.values()):
-                    all_labels = {}
-                    for lang in labels:
-                        all_labels[lang] = labels[lang]["value"]
-                
-                    all_aliases = {}
-                    for lang in aliases:
-                        all_aliases[lang] = []
-                        for alias in aliases[lang]:
-                            all_aliases[lang].append(alias["value"])
-                        all_aliases[lang] = list(set(all_aliases[lang]))
-                
-                    found = False
-                    for predicate in item["claims"]:
-                        if predicate == "P279":
-                            found = True
-                
-                    if found:
-                        category = "type"
-                    if entity[0] == "P":
-                        category = "predicate"
+                all_labels = {}
+                for lang in labels:
+                    all_labels[lang] = labels[lang]["value"]
             
-                    line_size = len(line)
-                    current_average_size = update_average_size(line_size)
-                    pbar.total = round(compressed_file_size / current_average_size)
-                    pbar.update(1)
+                all_aliases = {}
+                for lang in aliases:
+                    all_aliases[lang] = []
+                    for alias in aliases[lang]:
+                        all_aliases[lang].append(alias["value"])
+                    all_aliases[lang] = list(set(all_aliases[lang]))
+            
+                found = False
+                for predicate in item["claims"]:
+                    if predicate == "P279":
+                        found = True
+            
+                if found:
+                    category = "type"
+                if entity[0] == "P":
+                    category = "predicate"
         
-                    ###############################################################
-                    # ORGANIZATION EXTRACTION
-                    # All items with the root class Organization (Q43229) excluding country (Q6256), city (Q515), capitals (Q5119), 
-                    # administrative territorial entity of a single country (Q15916867), venue (Q17350442), sports league (Q623109) 
-                    # and family (Q8436)
+                line_size = len(line)
+                current_average_size = update_average_size(line_size)
+                pbar.total = round(compressed_file_size / current_average_size)
+                pbar.update(1)
+
+                ###############################################################
+                # ORGANIZATION EXTRACTION
+                # All items with the root class Organization (Q43229) excluding country (Q6256), city (Q515), capitals (Q5119), 
+                # administrative territorial entity of a single country (Q15916867), venue (Q17350442), sports league (Q623109) 
+                # and family (Q8436)
+                
+                # LOCATION EXTRACTION
+                # All items with the root class Geographic Location (Q2221906) excluding: food (Q2095), educational institution (Q2385804), 
+                # government agency (Q327333), international organization (Q484652) and time zone (Q12143)
+                
+                # PERSON EXTRACTION
+                # All items with the statement is instance of (P31) human (Q5) are classiﬁed as person.
+
+                NERtype = None
+
+                if item.get("type") == "item" and "claims" in item:
+                    p31_claims = item["claims"].get("P31", [])
                     
-                    # LOCATION EXTRACTION
-                    # All items with the root class Geographic Location (Q2221906) excluding: food (Q2095), educational institution (Q2385804), 
-                    # government agency (Q327333), international organization (Q484652) and time zone (Q12143)
-                    
-                    # PERSON EXTRACTION
-                    # All items with the statement is instance of (P31) human (Q5) are classiﬁed as person.
-        
-                    NERtype = None
-        
-                    if item.get("type") == "item" and "claims" in item:
-                        p31_claims = item["claims"].get("P31", [])
-                        
-                        if len(p31_claims) != 0:           
-                            for claim in p31_claims:
-                                mainsnak = claim.get("mainsnak", {})
-                                datavalue = mainsnak.get("datavalue", {})
-                                numeric_id = datavalue.get("value", {}).get("numeric-id")
-                                
-                                if numeric_id == 5:
-                                    NERtype = "PERS" 
-                                elif numeric_id in geolocation_subclass or any(k.lower() in description.get('value', '').lower() for k in ["district", "city", "country", "capital"]):
-                                    NERtype = "LOC"
-                                elif numeric_id in organization_subclass:
-                                    NERtype = "ORG"  
-                                else:
-                                    NERtype = "OTHERS"
-                        else:
-                            NERtype = "OTHERS" 
+                    if len(p31_claims) != 0:           
+                        for claim in p31_claims:
+                            mainsnak = claim.get("mainsnak", {})
+                            datavalue = mainsnak.get("datavalue", {})
+                            numeric_id = datavalue.get("value", {}).get("numeric-id")
                             
-                    ################################################################   
-                    ################################################################   
-                    # URL EXTRACTION
-                
-                    try:
-                        lang = labels.get("en", {}).get("language", "")
-                        tmp={}
-                        tmp["WD_id"] = item['id']
-                        tmp["WP_id"] = labels.get("en", {}).get("value", "")
-                
-                        url_dict={}
-                        url_dict["wikidata"] = "http://www.wikidata.org/wiki/"+tmp["WD_id"]
-                        url_dict["wikipedia"] = "http://"+lang+".wikipedia.org/wiki/"+tmp["WP_id"].replace(" ","_")
-                        url_dict["dbpedia"] = "http://dbpedia.org/resource/"+tmp["WP_id"].capitalize().replace(" ","_")
-                        
-                
-                    except json.decoder.JSONDecodeError:
-                        pass
-                    
-                    ################################################################    
-            
-                    objects = {}
-                    literals = {datatype: {} for datatype in DATATYPES}
-                    types = {"P31": []}
-                    join = {
-                        "items": {
-                            "id_entity": i,
-                            "entity": entity,
-                            "description": description,
-                            "labels": all_labels,
-                            "aliases": all_aliases,
-                            "types": types,
-                            "popularity": popularity,
-                            "kind": category,   # kind (entity, type or predicate, disambiguation or category)
-                            ######################
-                            # new updates
-                            "NERtype": NERtype, # (ORG, LOC, PER or OTHERS)
-                            "URLs" : url_dict
-                            ######################
-                        },
-                        "objects": { 
-                            "id_entity": i,
-                            "entity": entity,
-                            "objects":objects
-                        },
-                        "literals": { 
-                            "id_entity": i,
-                            "entity": entity,
-                            "literals": literals
-                        },
-                        "types": { 
-                            "id_entity": i,
-                            "entity": entity,
-                            "types": types
-                        },
-                    }
-                
-                    predicates = item["claims"]
-                    for predicate in predicates:
-                        for obj in predicates[predicate]:
-                            datatype = obj["mainsnak"]["datatype"]
-                
-                            if check_skip(obj, datatype):
-                                continue
-                
-                            if datatype == "wikibase-item" or datatype == "wikibase-property":
-                                value = obj["mainsnak"]["datavalue"]["value"]["id"]
-                
-                                if predicate == "P31" or predicate == "P106":
-                                    types["P31"].append(value)
-                
-                                if value not in objects:
-                                    objects[value] = []
-                                objects[value].append(predicate)    
+                            if numeric_id == 5:
+                                NERtype = "PERS" 
+                            elif numeric_id in geolocation_subclass or any(k.lower() in description.get('value', '').lower() for k in ["district", "city", "country", "capital"]):
+                                NERtype = "LOC"
+                            elif numeric_id in organization_subclass:
+                                NERtype = "ORG"  
                             else:
-                                value = get_value(obj, datatype)                
-                                lit = literals[DATATYPES_MAPPINGS[datatype]]
-                
-                                if predicate not in lit:
-                                    lit[predicate] = []
-                                lit[predicate].append(value)   
-                
+                                NERtype = "OTHERS"
+                    else:
+                        NERtype = "OTHERS" 
+                        
+                ################################################################   
+                ################################################################   
+                # URL EXTRACTION
+            
+                try:
+                    lang = labels.get("en", {}).get("language", "")
+                    tmp={}
+                    tmp["WD_id"] = item['id']
+                    tmp["WP_id"] = labels.get("en", {}).get("value", "")
+            
+                    url_dict={}
+                    url_dict["wikidata"] = "http://www.wikidata.org/wiki/"+tmp["WD_id"]
+                    url_dict["wikipedia"] = "http://"+lang+".wikipedia.org/wiki/"+tmp["WP_id"].replace(" ","_")
+                    url_dict["dbpedia"] = "http://dbpedia.org/resource/"+tmp["WP_id"].capitalize().replace(" ","_")
                     
+            
+                except json.decoder.JSONDecodeError:
+                    pass
                 
-                    for key in buffer:
-                        buffer[key].append(join[key])            
-                
-                    if len(buffer["items"]) == BATCH_SIZE:
-                        flush_buffer(buffer)
+                ################################################################    
         
+                objects = {}
+                literals = {datatype: {} for datatype in DATATYPES}
+                types = {"P31": []}
+                join = {
+                    "items": {
+                        "id_entity": i,
+                        "entity": entity,
+                        "description": description,
+                        "labels": all_labels,
+                        "aliases": all_aliases,
+                        "types": types,
+                        "popularity": popularity,
+                        "kind": category,   # kind (entity, type or predicate, disambiguation or category)
+                        ######################
+                        # new updates
+                        "NERtype": NERtype, # (ORG, LOC, PER or OTHERS)
+                        "URLs" : url_dict
+                        ######################
+                    },
+                    "objects": { 
+                        "id_entity": i,
+                        "entity": entity,
+                        "objects":objects
+                    },
+                    "literals": { 
+                        "id_entity": i,
+                        "entity": entity,
+                        "literals": literals
+                    },
+                    "types": { 
+                        "id_entity": i,
+                        "entity": entity,
+                        "types": types
+                    },
+                }
+            
+                predicates = item["claims"]
+                for predicate in predicates:
+                    for obj in predicates[predicate]:
+                        datatype = obj["mainsnak"]["datatype"]
+            
+                        if check_skip(obj, datatype):
+                            continue
+            
+                        if datatype == "wikibase-item" or datatype == "wikibase-property":
+                            value = obj["mainsnak"]["datavalue"]["value"]["id"]
+            
+                            if predicate == "P31" or predicate == "P106":
+                                types["P31"].append(value)
+            
+                            if value not in objects:
+                                objects[value] = []
+                            objects[value].append(predicate)    
+                        else:
+                            value = get_value(obj, datatype)                
+                            lit = literals[DATATYPES_MAPPINGS[datatype]]
+            
+                            if predicate not in lit:
+                                lit[predicate] = []
+                            lit[predicate].append(value)   
+            
+                
+                for key in buffer:
+                    buffer[key].append(join[key])            
+            
+                if len(buffer["items"]) == BATCH_SIZE:
+                    flush_buffer(buffer)
+
             except json.decoder.JSONDecodeError:
                 continue
         pbar.close()
-
-
-    json_file_path = "./yago_wiki_classification.json"
-
-    data = {
-        "ORG": ORG,
-        "LOC": LOC,
-        "PERS": PERS,
-        "OTHERS": OTHERS
-    }
-
-    # Write the categorized data to a JSON file
-    try:
-        with open(json_file_path, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
-        print(f"Data saved successfully to {json_file_path}")
-    except Exception as e:
-        print(f"Error saving data to JSON file: {e}")
+        end_time_computation = datetime.now()
+        elapsed_time = end_time_computation - start_time_computation
+        metadata_c.update_one({"status": "DOING"}, {"$set": {"status": "DONE", "end_time": end_time_computation, "elapsed_time": elapsed_time}})
