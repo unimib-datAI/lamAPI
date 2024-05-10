@@ -67,10 +67,10 @@ class Elastic:
         indexes_to_consider = [indexes[category] for category in indexes if category not in indexes_to_filter_out]
         return indexes_to_consider
     
-    def search(self, body, kg="wikidata", size=100):
+    def search(self, body, kg="wikidata", limit=100):
         self._index_name = self.get_index(kg)
         
-        query_result = self._elastic.search(index=self._index_name, query=body["query"], size=size)
+        query_result = self._elastic.search(index=self._index_name, query=body["query"], size=limit)
 
         hits = query_result["hits"]["hits"]
         max_score = query_result["hits"]["max_score"]

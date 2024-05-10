@@ -36,16 +36,19 @@ class LookupRetriever:
             final_result = {label: final_result}
             return final_result
 
-        body = self.create_query(name = label, fuzzy = fuzzy, types = types)
-        history = {}
+        query = self.create_query(name = label, fuzzy = fuzzy)
         final_result = {label: []}
         result = []
     
-        result, _ = self.elastic_retriever.search(body, kg, limit)
+        result, _ = self.elastic_retriever.search(query, kg, limit)
+
+        if len(result) == 0:
+            query = self.create_query(name = label, fuzzy = True)
+            result, _ = self.elastic_retriever.search(query, kg, limit=1000)
 
         if ids is not None:
-            body = self.create_ids_query(name = label, ids=ids)
-            result2, _ = self.elastic_retriever.search(body, kg, 500)
+            query = self.create_ids_query(name = label, ids=ids)
+            result2, _ = self.elastic_retriever.search(query, kg, limit=1000)
             result = result + result2
         
         mention_clean = clean_str(label)
@@ -54,8 +57,8 @@ class LookupRetriever:
    
         
 
-        body = self.create_token_query(name=label)
-        result_to_discard, _ = self.elastic_retriever.search(body, kg, limit)
+        query_token = self.create_token_query(name=label)
+        result_to_discard, _ = self.elastic_retriever.search(query_token, kg, limit)
         ambiguity_mention, corrects_tokens = (0, 0)
         history_labels, tokens_set = (set(), set())
         for entity in result_to_discard:
@@ -76,6 +79,7 @@ class LookupRetriever:
         results = items_collection.find({"category": "type", "entity": {"$in": ids}})
         types_id_to_name = {result["entity"]:result["labels"].get("en") for result in results}
 
+        history = {}
         for entity in result:
             id_entity = entity["id"]
             label_clean = clean_str(entity["name"])
@@ -118,23 +122,46 @@ class LookupRetriever:
                 "lastAccessed": datetime.datetime.utcnow(),
                 "fuzzy": fuzzy,
                 "limit": limit,
-                "query": body
+                "query": query
             })
         except:
             pass    
 
         return final_result
 
+    def create_token_query(self, name):
+        query = {"query":{"match":{"name": name}}}
+        return query
+    
 
-    def create_query(self, name, fuzzy=False, types=None):
-        splitted_name = name.split(" ")
-        
+    def create_ids_query(self, name, ids):
         # base query
         query_base = {
             "query": {
                 "bool": {
                     "should": [],
                     "must": []
+
+                }
+            },
+            "sort": [
+                {"popularity": {"order": "desc"}}
+            ]
+        }
+
+        # add ntoken
+        query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name}}})
+        query_base["query"]["bool"]["must"].append({"match": {"id": {"query": ids, "boost": 2.0}}})
+        return query_base
+    
+    def create_query(self, name, fuzzy=False):
+        splitted_name = name.split(" ")
+        
+        # base query
+        query_base = {
+            "query": {
+                "bool": {
+                    "must": [],
                 }
             },
             "sort": [
@@ -145,21 +172,10 @@ class LookupRetriever:
         # add ntoken
         query_base["query"]["bool"]["must"].append({"range": {"ntoken": {"gte": len(splitted_name) - 3, "lte": len(splitted_name) + 3}}})
         
-        # add token
-        query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name, "boost": 2}}})
-
         # add fuzzy
         if fuzzy:
-            query_base["query"]["bool"]["should"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
-
-        # add types constraint
-        if types is not None:
-            query_base["query"]["bool"]["should"].append({"match": {"type": types}})
+            query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "fuzziness": "auto"}}})
+        else:
+            query_base["query"]["bool"]["must"].append({"match": {"name": {"query": name, "boost": 2}}}) # add token (normal query)
         
         return query_base
-
-
-    def create_token_query(self, name):
-        query = {"query":{"match":{"name": name}}}
-
-        return query
