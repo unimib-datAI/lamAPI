@@ -259,5 +259,5 @@ services:
     volumes:
       - ./work:/home/jovyan/work
       - ./api:/home/jovyan/work/api
-      - ./data:/home/jovyan/work/my-data
+      - ./data:/home/jovyan/work/data
      
