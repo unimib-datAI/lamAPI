@@ -17,8 +17,8 @@ MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
 MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
 current_date = datetime.now()
 formatted_date = current_date.strftime("%d%m%Y")
-DB_NAME = f"wikidata{formatted_date}"
-global initial_total_lines_estimate
+DB_NAME = f"wikidata11052024"
+global initial_total_lines_estimated
 wikidata_dump_path = './data/latest-all.json.bz2'
 
 client = MongoClient(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT, username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
@@ -105,7 +105,7 @@ def update_average_size(new_size):
 initial_estimated_average_size = 800
 BATCH_SIZE = 100 # Number of entities to insert in a single batch
 compressed_file_size = os.path.getsize(wikidata_dump_path)
-initial_total_lines_estimate = compressed_file_size / initial_estimated_average_size
+initial_total_lines_estimated = compressed_file_size / initial_estimated_average_size
 
 DATATYPES_MAPPINGS = {
     'external-id': 'STRING',
@@ -263,7 +263,7 @@ if __name__ == "__main__":
 
     with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
         count = 1000
-        pbar = tqdm(total=initial_total_lines_estimate)
+        pbar = tqdm(total=initial_total_lines_estimated)
         for i, line in enumerate(f):
             try:
                 # Parse JSON data from each line
