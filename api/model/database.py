@@ -195,7 +195,6 @@ class Database():
 
     def get_requested_collection(self, collection, kg = "wikidata"):
         self.update_mappings()
-        print("MAPPINGS", self.mappings, flush=True)
         if kg in self.mappings and self.mappings[kg] is not None: 
             return self.mongo[self.mappings[kg]][collection]
         else:
