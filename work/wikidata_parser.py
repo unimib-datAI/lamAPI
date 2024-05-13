@@ -295,10 +295,10 @@ if __name__ == "__main__":
                         category = "type"
                         break
                     if predicate == "P31":
-                        if 'Q4167410' == entity:
+                        if 'Q4167410' == types["P31"]:
                             category = "disambiguation"
                             break
-                        elif 'Q4167836' == entity:
+                        elif 'Q4167836' == types["P31"]:
                             category = "category"
                             break
 
