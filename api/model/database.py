@@ -24,9 +24,16 @@ class Database():
         self.mappings = {kg.lower():None for kg in SUPPORTED_KGS}
         self.mappings["fake"] = FAKE_DB_NAME  # Add the fake database to mappings
         self.initialize_and_populate_fake_db()
+        self.update_mappings()
+
+    def update_mappings(self):
         history = {}
         for db in self.mongo.list_database_names():
             # Handle real databases
+            doc = self.mongo[db]["metadata"].find_one()
+            print(doc)
+            if doc is not None and doc.get("status") == "DOING":
+                continue
             kg_name = ''.join(filter(str.isalpha, db))
             date = ''.join(filter(str.isdigit, db))
             if kg_name in self.mappings and kg_name != "fake":  # Exclude the fake database
@@ -187,7 +194,8 @@ class Database():
         }
 
     def get_requested_collection(self, collection, kg = "wikidata"):
-        if kg in self.mappings: 
+        self.update_mappings()
+        if kg in self.mappings and self.mappings[kg] is not None: 
             return self.mongo[self.mappings[kg]][collection]
         else:
-            return None
+            raise ValueError(f"KG {kg} is not supported.")
