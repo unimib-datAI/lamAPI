@@ -30,7 +30,7 @@ class ColumnAnalysis:
             "CARDINAL": "LIT",
             "URL": "LIT",
             "DESC": "LIT",
-            "TOKEN": "NE",
+            "TOKEN": "LIT",
             "INTEGER": "LIT",
             "FLOAT": "LIT",
             "DATETIME": "LIT",
@@ -94,14 +94,13 @@ class ColumnAnalysis:
                     update_dict(labels, label)
                     tag = self.entity_type_dict[label]
                     update_dict(tags, tag)
-                    
-                label = self.literal_recognizer.check_literal(cell)  
-                
-                if label != "STRING":
-                    update_dict(labels, label)
-                    tag = self.entity_type_dict[label]
-                    update_dict(tags, tag)
-        
+                else:   
+                    label = self.literal_recognizer.check_literal(cell)  
+                    if label != "STRING":
+                        update_dict(labels, label)
+                        tag = self.entity_type_dict[label]
+                        update_dict(tags, tag)
+            
   
             text_to_analyze = " ; ".join(column)
             doc = nlp(text_to_analyze)

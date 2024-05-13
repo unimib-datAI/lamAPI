@@ -1,4 +1,3 @@
-from model.database import Database
 
 class ObjectsRetriever:
 
