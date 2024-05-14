@@ -10,6 +10,24 @@ from requests import get
 from datetime import datetime
 
 
+def create_indexes(db):
+    # Specify the collections and their respective fields to be indexed
+    index_specs = {
+        'cache': ['cell', 'lastAccessed'],  # Example: Indexing 'cell' and 'type' fields in 'cache' collection
+        'items': ['id_entity', 'entity', 'category', 'popularity'],
+        'literals': ['id_entity', 'entity'],
+        'objects': ['id_entity', 'entity'],
+        'types': ['id_entity', 'entity']
+    }
+
+    for collection, fields in index_specs.items():
+        if collection == "cache":
+            db[collection].create_index([('cell', 1), ('fuzzy', 1), ('NERtype', 1), ('type', 1), ('kg', 1), ('limit', 1)], unique=True)
+        elif collection == "items":
+            db[collection].create_index([('entity', 1), ('category', 1)], unique=True)    
+        for field in fields:
+            db[collection].create_index([(field, 1)])  # 1 for ascending order
+
 # MongoDB connection setup
 MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
 MONGO_ENDPOINT_PORT = int(MONGO_ENDPOINT_PORT)
@@ -17,19 +35,21 @@ MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
 MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
 current_date = datetime.now()
 formatted_date = current_date.strftime("%d%m%Y")
-DB_NAME = f"wikidata11052024"
+DB_NAME = f"wikidata{formatted_date}"
 global initial_total_lines_estimated
 wikidata_dump_path = './data/latest-all.json.bz2'
 
 client = MongoClient(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT, username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
 print(client)
 
-log_c = client.wikidata.log
+log_c = client[DB_NAME].log
 items_c = client[DB_NAME].items
 objects_c = client[DB_NAME].objects
 literals_c = client[DB_NAME].literals
 types_c = client[DB_NAME].types
 metadata_c = client[DB_NAME].metadata
+
+create_indexes(client[DB_NAME])
 
 start_time_computation = datetime.now()    
 metadata_c.insert_one({
@@ -274,7 +294,6 @@ if __name__ == "__main__":
                 english_label = labels.get("en", {}).get("value", "")
                 aliases = item.get("aliases", {})
                 description = item.get('descriptions', {}).get('en', {})
-                category = "entity"
                 sitelinks = item.get("sitelinks", {})
                 popularity = len(sitelinks) if len(sitelinks) > 0 else 1
 
@@ -290,21 +309,7 @@ if __name__ == "__main__":
                         all_aliases[lang].append(alias["value"])
                     all_aliases[lang] = list(set(all_aliases[lang]))
             
-                for predicate in item["claims"]:
-                    if predicate == "P279":
-                        category = "type"
-                        break
-                    if predicate == "P31":
-                        if 'Q4167410' == types["P31"]:
-                            category = "disambiguation"
-                            break
-                        elif 'Q4167836' == types["P31"]:
-                            category = "category"
-                            break
-
-                if entity[0] == "P":
-                    category = "predicate"
-        
+              
                 line_size = len(line)
                 current_average_size = update_average_size(line_size)
                 pbar.total = round(compressed_file_size / current_average_size)
@@ -378,7 +383,7 @@ if __name__ == "__main__":
                         "aliases": all_aliases,
                         "types": types,
                         "popularity": popularity,
-                        "kind": category,   # kind (entity, type or predicate, disambiguation or category)
+                        "kind": None,   # kind (entity, type or predicate, disambiguation or category)
                         ######################
                         # new updates
                         "NERtype": NERtype, # (ORG, LOC, PER or OTHERS)
@@ -403,6 +408,7 @@ if __name__ == "__main__":
                 }
             
                 predicates = item["claims"]
+                is_type = False 
                 for predicate in predicates:
                     for obj in predicates[predicate]:
                         datatype = obj["mainsnak"]["datatype"]
@@ -412,7 +418,9 @@ if __name__ == "__main__":
             
                         if datatype == "wikibase-item" or datatype == "wikibase-property":
                             value = obj["mainsnak"]["datavalue"]["value"]["id"]
-            
+
+                            if predicate == "P279":
+                                is_type = True
                             if predicate == "P31" or predicate == "P106":
                                 types["P31"].append(value)
             
@@ -426,7 +434,18 @@ if __name__ == "__main__":
                             if predicate not in lit:
                                 lit[predicate] = []
                             lit[predicate].append(value)   
-            
+                
+                kind = "entity"
+                if is_type:
+                    kind = "type"
+                elif entity[0] == "P":
+                    kind = "predicate"
+                elif 'Q4167410' in types["P31"]:
+                    kind = "disambiguation"    
+                elif 'Q4167836' in types["P31"]:
+                    kind = "category"    
+
+                join["items"]["kind"] = kind
                 
                 for key in buffer:
                     buffer[key].append(join[key])            
