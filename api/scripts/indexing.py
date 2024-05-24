@@ -150,7 +150,7 @@ try:
         for j, name in enumerate(names):
             doc = {
                 "_op_type":"index",
-                "_index": db_name,
+                "_index": "wikidata",
                 "_id": index,
                 "id": id_entity,
                 "name": name,
