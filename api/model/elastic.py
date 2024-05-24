@@ -93,6 +93,9 @@ class Elastic:
                     "ntoken_entity": hit["_source"]["ntoken"],
                     "length_entity": hit["_source"]["length"]
                 })
+                if "kind" in hit["_source"]:
+                    new_hits[i]["kind"] = hit["_source"]["kind"]   
+                    new_hits[i]["NERtype"] = hit["_source"]["NERtype"]
                 index_sources[hit["_source"]["id"]] = hit["_index"]
 
         return new_hits, index_sources
