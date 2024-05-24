@@ -9,16 +9,19 @@ class LookupRetriever:
         #self.candidate_cache_collection.create_index([('cell', 1), ('type', 1), ('kg', 1), ('size', 1)], unique=True)
         self.elastic_retriever = Elastic()
 
-    def search(self, label, limit = 100, kg = "wikidata", fuzzy = False, types = None, ids = None):
+    def search(self, label, limit = 100, kg = "wikidata", fuzzy = False, types = None, ids = None, query = None):
         self.candidate_cache_collection = self.database.get_requested_collection("cache", kg=kg)
         label_norm = label.strip().lower()   
         query_result = self._exec_query(label_norm, limit = limit, kg = kg,
-                                        fuzzy = fuzzy, types = types, ids = ids)
+                                        fuzzy = fuzzy, types = types, ids = ids, query = query)
             
         return query_result
 
-    def _exec_query(self, label, limit=100, kg = "wikidata", fuzzy = False, types = None, ids = None):
-        
+    def _exec_query(self, label, limit=100, kg = "wikidata", fuzzy = False, types = None, ids = None, query = None):
+        if query is not None:
+            result, _ = self.elastic_retriever.search(query, kg, limit)
+            return result
+
         if types is not None:
             types = types.split(" ")
             types.sort()

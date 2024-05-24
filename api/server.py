@@ -183,7 +183,8 @@ class BaseEndpoint(Resource):
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>.",
         "fuzzy": "Set this param to True if fuzzy search must be applied. Default is <code>False</code>.",
         "types": "Types to be matched in the Knowledge Graph as constraint in the retrieval. Add Types separeted by spaces. E.g. Scientist Philosopher Person",
-        "ids": "Ids of the entity"
+        "ids": "Ids of the entity",
+        "query": "Query to be used to test elastic search. Default is <code>None</code>."
     },
     description="Given a string as input, the endpoint performs a search in the specified Knowledge Graph."
 )
@@ -198,6 +199,7 @@ class Lookup(BaseEndpoint):
         parser.add_argument('fuzzy', type=str, location="args")
         parser.add_argument('types', type=str, location="args")
         parser.add_argument('ids', type=str, location="args")
+        parser.add_argument('query', type=str, location="args")
         args = parser.parse_args()
 
         name = args["name"]
@@ -208,7 +210,7 @@ class Lookup(BaseEndpoint):
         fuzzy = args["fuzzy"]
         types = args["types"]
         ids = args["ids"]
-
+        query = args["query"]
         
         token_is_valid, token_error = params_validator.validate_token(token)
         if not token_is_valid:
@@ -233,7 +235,7 @@ class Lookup(BaseEndpoint):
         
         try:
             results = lookup_retriever.search(name, limit=limit_error_or_value, kg=kg_error_or_value, 
-                                                fuzzy=fuzzy_value, types=types, ids=ids)
+                                                fuzzy=fuzzy_value, types=types, ids=ids, query=query)
         except Exception as e:
             return build_error(f"Elastic error: {str(e)}", 400, traceback=traceback.format_exc())
 
