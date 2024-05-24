@@ -113,7 +113,7 @@ try:
 
     
     resp = es.options(ignore_status=[400]).indices.create(
-        index=db_name,
+        index="wikidata",
         settings=MAPPING["settings"],
         mappings=MAPPING["mappings"],
     )
