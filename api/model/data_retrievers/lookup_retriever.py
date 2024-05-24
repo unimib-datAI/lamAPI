@@ -1,6 +1,7 @@
 from model.elastic import Elastic
 from model.utils import editdistance, clean_str, compute_similarity_between_string
 import datetime
+import json
 
 class LookupRetriever:
 
@@ -19,6 +20,7 @@ class LookupRetriever:
 
     def _exec_query(self, label, limit=100, kg = "wikidata", fuzzy = False, types = None, ids = None, query = None):
         if query is not None:
+            query = json.loads(query)
             result, _ = self.elastic_retriever.search(query, kg, limit)
             return result
 
