@@ -24,6 +24,8 @@ MAPPING = {
                 "analyzer": "my_analyzer"
             },
             "description": {"type": "text"},
+            "kind": {"type": "keyword"},
+            "NERtype": {"type": "keyword"},
             "types": {"type": "keyword"},
             "length": {"type": "long"},
             "ntoken": {"type": "long"},

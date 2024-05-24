@@ -68,9 +68,9 @@ class Elastic:
         return indexes_to_consider
     
     def search(self, body, kg="wikidata", limit=100):
-        self._index_name = self.get_index(kg)
+        #self._index_name = self.get_index(kg)
         
-        query_result = self._elastic.search(index=self._index_name, query=body["query"], size=limit)
+        query_result = self._elastic.search(index=kg, query=body["query"], size=limit)
 
         hits = query_result["hits"]["hits"]
         max_score = query_result["hits"]["max_score"]
