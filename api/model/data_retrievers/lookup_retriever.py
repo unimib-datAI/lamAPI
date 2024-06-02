@@ -26,9 +26,10 @@ class LookupRetriever:
         if query is not None:
             query = json.loads(query)
             result, _ = self.elastic_retriever.search(query, kg, limit)
-            ambiguity_mention, corrects_tokens = self._get_ambiguity_mention(label, mention_clean, kg, limit)
-            result = self._get_final_candidates_list(result, mention_clean, kg, ambiguity_mention, 
-                                                              corrects_tokens, ntoken_mention, length_mention)
+            ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
+            types_id_to_name = self._get_types_id_to_name(ids, kg)
+            for entity in result:
+                entity["types"] = [{"id": id_type, "name": types_id_to_name.get(id_type)} for id_type in entity["types"].split(" ")]
             return result
 
         if types is not None:
@@ -106,9 +107,7 @@ class LookupRetriever:
     
     def _get_final_candidates_list(self, result, mention_clean, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention):
         ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
-        items_collection = self.database.get_requested_collection("items", kg=kg)        
-        results = items_collection.find({"kind": "type", "entity": {"$in": ids}})
-        types_id_to_name = {result["entity"]:result["labels"].get("en") for result in results}
+        types_id_to_name = self._get_types_id_to_name(ids, kg)
 
         history = {}
         for entity in result:
@@ -141,6 +140,12 @@ class LookupRetriever:
                 history[id_entity] = obj
                 
         return list(history.values())
+    
+    def _get_types_id_to_name(self, ids, kg):
+        items_collection = self.database.get_requested_collection("items", kg=kg)        
+        results = items_collection.find({"kind": "type", "entity": {"$in": ids}})
+        types_id_to_name = {result["entity"]:result["labels"].get("en") for result in results}
+        return types_id_to_name
 
     def create_token_query(self, name):
         query = {"query":{"match":{"name": name}}}
