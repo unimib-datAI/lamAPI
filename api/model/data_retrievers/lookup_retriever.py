@@ -107,7 +107,7 @@ class LookupRetriever:
     def _get_final_candidates_list(self, result, mention_clean, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention):
         ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
         items_collection = self.database.get_requested_collection("items", kg=kg)        
-        results = items_collection.find({"category": "type", "entity": {"$in": ids}})
+        results = items_collection.find({"kind": "type", "entity": {"$in": ids}})
         types_id_to_name = {result["entity"]:result["labels"].get("en") for result in results}
 
         history = {}
