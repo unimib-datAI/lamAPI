@@ -230,6 +230,9 @@ class Lookup(BaseEndpoint):
         if not limit_is_valid:
             return limit_error_or_value
         
+        if name is None:
+            name = ""
+            
         try:
             results = lookup_retriever.search(name, limit=limit_error_or_value, kg=kg_error_or_value, 
                                                 fuzzy=fuzzy_value, types=types, ids=ids, query=query)
