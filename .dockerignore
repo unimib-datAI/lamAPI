@@ -6,6 +6,7 @@ esdata02/
 esdata03/
 kibanadata/
 work/
+data/
 
 # Ignore data mounted from the host
 /my-data/
