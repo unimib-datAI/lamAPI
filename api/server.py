@@ -233,7 +233,7 @@ class Lookup(BaseEndpoint):
             return limit_error_or_value
         
         if name is None:
-            name = ""
+            return build_error("Name is required", 400)
 
         try:
             results = lookup_retriever.search(name, limit=limit_error_or_value, kg=kg_error_or_value, 

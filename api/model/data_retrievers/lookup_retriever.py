@@ -19,9 +19,16 @@ class LookupRetriever:
         return query_result
 
     def _exec_query(self, label, limit=100, kg = "wikidata", fuzzy = False, types = None, ids = None, query = None):
+        mention_clean = clean_str(label)
+        ntoken_mention = len(label.split(" "))
+        length_mention = len(label)
+
         if query is not None:
             query = json.loads(query)
             result, _ = self.elastic_retriever.search(query, kg, limit)
+            ambiguity_mention, corrects_tokens = self._get_ambiguity_mention(label, mention_clean, kg, limit)
+            result = self._get_final_candidates_list(result, mention_clean, kg, ambiguity_mention, 
+                                                              corrects_tokens, ntoken_mention, length_mention)
             return result
 
         if types is not None:
@@ -56,12 +63,29 @@ class LookupRetriever:
             result2, _ = self.elastic_retriever.search(query, kg, limit=1000)
             result = result + result2
         
-        mention_clean = clean_str(label)
-        ntoken_mention = len(label.split(" "))
-        length_mention = len(label)
-   
-        
+    
+        ambiguity_mention, corrects_tokens = self._get_ambiguity_mention(label, mention_clean, kg, limit)
+        final_result[label] = self._get_final_candidates_list(result, mention_clean, kg, ambiguity_mention, 
+                                                              corrects_tokens, ntoken_mention, length_mention)
+       
+        try:
+            self.candidate_cache_collection.insert_one({
+                "cell": label,
+                "type": types,
+                "kg": kg,
+                "candidates": final_result[label],
+                "lastAccessed": datetime.datetime.utcnow(),
+                "fuzzy": fuzzy,
+                "limit": limit,
+                "query": query
+            })
+        except:
+            pass    
 
+        return final_result
+
+
+    def _get_ambiguity_mention(self, label, mention_clean, kg, limit=100):
         query_token = self.create_token_query(name=label)
         result_to_discard, _ = self.elastic_retriever.search(query_token, kg, limit)
         ambiguity_mention, corrects_tokens = (0, 0)
@@ -78,7 +102,9 @@ class LookupRetriever:
         ambiguity_mention = ambiguity_mention / len(history_labels) if len(history_labels) > 0 else 0
         ambiguity_mention = round(ambiguity_mention, 3)
         corrects_tokens = round(len(tokens_mention.intersection(tokens_set)) / len(tokens_mention), 3)
-        
+        return ambiguity_mention, corrects_tokens
+    
+    def _get_final_candidates_list(self, result, mention_clean, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention):
         ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
         items_collection = self.database.get_requested_collection("items", kg=kg)        
         results = items_collection.find({"category": "type", "entity": {"$in": ids}})
@@ -113,26 +139,8 @@ class LookupRetriever:
                 history[id_entity] = obj
             elif (ed_score+jaccard_score) > (history[id_entity]["ed_score"]+history[id_entity]["jaccard_score"]):
                 history[id_entity] = obj
-
-            
-        final_result[label] = list(history.values())
-    
-       
-        try:
-            self.candidate_cache_collection.insert_one({
-                "cell": label,
-                "type": types,
-                "kg": kg,
-                "candidates": final_result[label],
-                "lastAccessed": datetime.datetime.utcnow(),
-                "fuzzy": fuzzy,
-                "limit": limit,
-                "query": query
-            })
-        except:
-            pass    
-
-        return final_result
+                
+        return list(history.values())
 
     def create_token_query(self, name):
         query = {"query":{"match":{"name": name}}}
