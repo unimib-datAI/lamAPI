@@ -229,9 +229,6 @@ class Lookup(BaseEndpoint):
         limit_is_valid, limit_error_or_value = params_validator.validate_limit(limit)
         if not limit_is_valid:
             return limit_error_or_value
-
-        if name is None:
-            return build_error("Name is not defined", 400)
         
         try:
             results = lookup_retriever.search(name, limit=limit_error_or_value, kg=kg_error_or_value, 
