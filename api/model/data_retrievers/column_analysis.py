@@ -30,7 +30,7 @@ class ColumnAnalysis:
             "CARDINAL": "LIT",
             "URL": "LIT",
             "DESC": "LIT",
-            "TOKEN": "LIT",
+            "TOKEN": "NE",
             "INTEGER": "LIT",
             "FLOAT": "LIT",
             "DATETIME": "LIT",
