@@ -130,7 +130,7 @@ class ColumnAnalysis:
         winning_type = None
         winning_datatype = None
         if tags["LIT"] + tags["NE"] == 0:
-            winning_tag = "LIT"
+            winning_tag = "NE"
             winning_datatype = "STRING"
         elif tags["NE"] > rows * 2:
             winning_tag = "LIT"
