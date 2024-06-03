@@ -1,6 +1,6 @@
+from model.literal_recognizer import LiteralRecognizer
 import spacy
 import re
-from model.literal_recognizer import LiteralRecognizer
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -57,7 +57,8 @@ class ColumnAnalysis:
 
         self.NE_DATATYPE = ["PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE"]
 
-    def classify_columns(self, columns=[]):
+
+    def classifiy_columns(self, columns = []):
        
         def update_dict(dictionary, key, value=1):
             if key not in dictionary:
@@ -66,18 +67,16 @@ class ColumnAnalysis:
 
         final_result = {}
         rows = len(columns[0])
-        
         for index, column in enumerate(columns):
             final_result[index] = {} 
             
+            # Analyze the concatenated text using Spacy
             labels = {}
             tags = {"NE": 0, "LIT": 0}
 
             for cell in column:
                 is_number = False
                 label = None
-                
-                # Check if the cell is a number
                 try:
                     float(cell)
                     is_number = True
@@ -95,21 +94,25 @@ class ColumnAnalysis:
                     update_dict(labels, label)
                     tag = self.entity_type_dict[label]
                     update_dict(tags, tag)
-                else:
+                else:   
                     label = self.literal_recognizer.check_literal(cell)  
                     if label != "STRING":
                         update_dict(labels, label)
                         tag = self.entity_type_dict[label]
                         update_dict(tags, tag)
             
+  
             text_to_analyze = " ; ".join(column)
             doc = nlp(text_to_analyze)
             for ent in doc.ents:
                 label = ent.label_
+                if label in ["CARDINAL", "ORDINAL"]:
+                    continue
                 update_dict(labels, label)
-                tag = self.entity_type_dict.get(label, "LIT")
+                tag = self.entity_type_dict[label]
                 update_dict(tags, tag)
 
+            
             winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
 
             final_result[index] = {
@@ -121,37 +124,39 @@ class ColumnAnalysis:
             }
         return final_result
     
+
     def _get_winning_data_and_datatype(self, tags, labels, rows):
         winning_tag = "NE"
         winning_type = None
         winning_datatype = "STRING"
-        
         if tags["LIT"] + tags["NE"] == 0:
             winning_tag = "NE"
             winning_datatype = "STRING"
         elif tags["NE"] > rows * 2:
-            winning_tag = "NE"
+            winning_tag = "LIT"
+            winning_datatype = "STRING"
         elif tags["LIT"] >= tags["NE"]:
             winning_tag = "LIT"
         elif tags["NE"] <= rows * 0.40:
             winning_tag = "LIT"    
     
+        
         if labels.get("DATE") == labels.get("CARDINAL"):
             if "CARDINAL" in labels:
                 labels["CARDINAL"] += 1
         
         if winning_tag == "LIT":
-            new_labels = {label: labels.get(label, 0) for label in self.LIT_DATATYPE}
+            new_labels = {label:labels.get(label, 0) for label in self.LIT_DATATYPE}
             label_max = max(new_labels, key=new_labels.get, default=None)
             if labels.get(label_max, 0) >= rows * 0.50 and winning_datatype is None:
                 winning_type = label_max    
             else:
                 winning_type = "STRING"
         else:
-            new_labels = {label: labels.get(label, 0) for label in self.NE_DATATYPE}
+            new_labels = {label:labels.get(label, 0) for label in self.NE_DATATYPE}
             label_max = max(new_labels, key=new_labels.get, default=None)
             winning_type = label_max  
 
-        winning_datatype = self.LIT_DATATYPE.get(winning_type, "STRING")
+        winning_datatype = self.LIT_DATATYPE.get(winning_type)
        
         return winning_tag, winning_type, winning_datatype
