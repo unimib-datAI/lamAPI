@@ -523,7 +523,7 @@ class ColumnAnalysis(BaseEndpoint):
         else:
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
-                return column_analysis_classifier.classifiy_columns(columns=data)
+                return column_analysis_classifier.classify_columns(columns=data)
             else:
                 build_error("Invalid Data", 400)
 
