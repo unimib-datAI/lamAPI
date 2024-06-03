@@ -113,7 +113,13 @@ class ColumnAnalysis:
                     tag = self.entity_type_dict[label]
                     update_dict(tags, tag)
 
-            winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
+            # Prioritize DESC if it is present in labels
+            if "DESC" in labels and labels["DESC"] >= rows * 0.50:
+                winning_tag = "LIT"
+                winning_type = "DESC"
+                winning_datatype = "STRING"
+            else:
+                winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
 
             final_result[index] = {
                 'index_column': index,
