@@ -165,3 +165,5 @@ certs/
 esdata*/
 mongo-data/
 data/
+work/R4_key_to_cell.json
+work/R4_ner_type.json
