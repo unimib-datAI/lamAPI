@@ -1,5 +1,6 @@
 import random
 from collections import defaultdict
+import dateutil.parser
 
 class ColumnAnalysis:
     def __init__(self, lookup_retriever):
@@ -35,22 +36,29 @@ class ColumnAnalysis:
             is_no_ann = False
             
             for cell in column:
-                is_number = False
                 label = None
                 
-                # Check if the cell is a number
+                # Check if the cell is a date
                 try:
-                    float(cell)
-                    is_number = True
+                    dateutil.parser.parse(cell, fuzzy=False)
+                    label = "DATE"
                 except:
                     pass
                 
-                if is_number:
-                    label = "CARDINAL"
-                elif len(cell.split(" ")) >= 7:
-                    label = "DESC"
-                elif len(cell.split(" ")) == 1 and len(cell) <= 4:
-                    label = "TOKEN"
+                # Check if the cell is a number if it's not already identified as a date
+                if not label:
+                    try:
+                        float(cell)
+                        label = "CARDINAL"
+                    except:
+                        pass
+                
+                # Check for other types
+                if not label:
+                    if len(cell.split(" ")) >= 7:
+                        label = "DESC"
+                    elif len(cell.split(" ")) == 1 and len(cell) <= 4:
+                        label = "TOKEN"
                 
                 if label == "DESC":
                     is_no_ann = True
@@ -60,7 +68,7 @@ class ColumnAnalysis:
                     tag = "LIT" if label in self.LIT_DATATYPE else "NE"
                     update_dict(tags, tag)
                 else:
-                    label = self.check_literal(cell)  
+                    label = self.check_literal(cell)
                     if label != "STRING":
                         update_dict(labels, label)
                         tag = "LIT" if label in self.LIT_DATATYPE else "NE"
@@ -71,7 +79,7 @@ class ColumnAnalysis:
                     'index_column': index,
                     'tag': "LIT",
                     'classification': "DESC",
-                    'datatype': "STRING",
+                    'datatype': "NO_ANN",
                     'column_rows': column
                 }
                 continue
