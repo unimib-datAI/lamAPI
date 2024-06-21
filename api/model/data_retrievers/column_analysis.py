@@ -86,9 +86,11 @@ class ColumnAnalysis:
                 type_details = defaultdict(list)
                 for cell in column:
                     lookup_result = self.lookup_retriever.search(cell)
+                    cell = list(lookup_result.keys())[0]
+                    lookup_result = lookup_result[cell]
                     if lookup_result:
                         sorted_lookup_result = sorted(
-                            lookup_result[cell], 
+                            lookup_result, 
                             key=lambda x: (x['ed_score'] + x['jaccard_score']) / 2,
                             reverse=True
                         )[:3]  # Top 3 results after sorting
