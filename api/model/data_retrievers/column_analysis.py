@@ -55,7 +55,7 @@ class ColumnAnalysis:
                 
                 # Check for other types
                 if not label:
-                    if len(cell.split(" ")) >= 7:
+                    if len(cell.split(" ")) >= 20:
                         label = "DESC"
                     elif len(cell.split(" ")) == 1 and len(cell) <= 4:
                         label = "TOKEN"
