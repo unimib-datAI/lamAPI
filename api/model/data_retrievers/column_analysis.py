@@ -1,64 +1,23 @@
-from model.literal_recognizer import LiteralRecognizer
-import spacy
-
-# Load Spacy model
-nlp = spacy.load("en_core_web_sm")
+import random
+from collections import defaultdict
 
 class ColumnAnalysis:
-
-    def __init__(self):
-        self.literal_recognizer = LiteralRecognizer()
-       
-        self.entity_type_dict = {
-            "PERSON": "NE",
-            "NORP": "NE",
-            "FAC": "NE",
-            "ORG": "NE",
-            "GPE": "NE",
-            "LOC": "NE",
-            "PRODUCT": "NE",
-            "EVENT": "NE",
-            "WORK_OF_ART": "NE",
-            "LAW": "NE",
-            "LANGUAGE": "NE",
-            "DATE": "LIT",
-            "TIME": "LIT",
-            "PERCENT": "LIT",
-            "MONEY": "LIT",
-            "QUANTITY": "LIT",
-            "ORDINAL": "LIT",
-            "CARDINAL": "LIT",
-            "URL": "LIT",
-            "DESC": "LIT",
-            "TOKEN": "NE",
-            "INTEGER": "LIT",
-            "FLOAT": "LIT",
-            "DATETIME": "LIT",
-            "EMAIL": "LIT"
-        }
-
+    def __init__(self, lookup_retriever):
+        self.lookup_retriever = lookup_retriever
         self.LIT_DATATYPE = {
-            "DATE": "DATETIME", 
-            "TIME": "STRING", 
-            "PERCENT": "STRING", 
-            "MONEY": "STRING", 
-            "QUANTITY": "STRING", 
-            "ORDINAL": "NUMBER", 
-            "CARDINAL": "NUMBER", 
-            "URL": "STRING",
-            "DESC": "STRING",
-            "TOKEN": "STRING",
-            "INTEGER": "NUMBER",
-            "FLOAT": "NUMBER",
-            "DATETIME": "DATETIME",
-            "EMAIL": "STRING",
-            "STRING": "STRING"
+            "DATE": "DATETIME", "TIME": "STRING", "PERCENT": "STRING", "MONEY": "STRING", 
+            "QUANTITY": "STRING", "ORDINAL": "NUMBER", "CARDINAL": "NUMBER", "URL": "STRING",
+            "EMAIL": "STRING", "INTEGER": "NUMBER", "FLOAT": "NUMBER", "DATETIME": "DATETIME",
+            "STRING": "STRING", "DESC": "STRING"
         }
 
-        self.NE_DATATYPE = ["PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE"]
-
+    def sub_sample_column(self, column, sample_size=50):
+        unique_values = list(set(column))
+        if len(unique_values) <= sample_size:
+            return unique_values
+        return random.sample(unique_values, sample_size)
+    
     def classify_columns(self, columns=[]):
-       
         def update_dict(dictionary, key, value=1):
             if key not in dictionary:
                 dictionary[key] = 0
@@ -68,12 +27,13 @@ class ColumnAnalysis:
         rows = len(columns[0])
         
         for index, column in enumerate(columns):
+            column = self.sub_sample_column(column)
             final_result[index] = {} 
             
-            # Analyze the concatenated text using Spacy
-            labels = {}
+            labels = defaultdict(int)
             tags = {"NE": 0, "LIT": 0}
-
+            is_no_ann = False
+            
             for cell in column:
                 is_number = False
                 label = None
@@ -84,7 +44,7 @@ class ColumnAnalysis:
                     is_number = True
                 except:
                     pass
-            
+                
                 if is_number:
                     label = "CARDINAL"
                 elif len(cell.split(" ")) >= 7:
@@ -92,35 +52,68 @@ class ColumnAnalysis:
                 elif len(cell.split(" ")) == 1 and len(cell) <= 4:
                     label = "TOKEN"
                 
+                if label == "DESC":
+                    is_no_ann = True
+                
                 if label is not None:
                     update_dict(labels, label)
-                    tag = self.entity_type_dict[label]
+                    tag = "LIT" if label in self.LIT_DATATYPE else "NE"
                     update_dict(tags, tag)
                 else:
-                    label = self.literal_recognizer.check_literal(cell)  
+                    label = self.check_literal(cell)  
                     if label != "STRING":
                         update_dict(labels, label)
-                        tag = self.entity_type_dict[label]
+                        tag = "LIT" if label in self.LIT_DATATYPE else "NE"
                         update_dict(tags, tag)
             
-            for cell in column:
-                doc = nlp(cell)
-                for ent in doc.ents:
-                    label = ent.label_
-                    if label in ["CARDINAL", "ORDINAL"]:
-                        continue
-                    update_dict(labels, label)
-                    tag = self.entity_type_dict[label]
-                    update_dict(tags, tag)
+            if is_no_ann:
+                final_result[index] = {
+                    'index_column': index,
+                    'tag': "LIT",
+                    'classification': "DESC",
+                    'datatype': "STRING",
+                    'column_rows': column
+                }
+                continue
 
-            # Prioritize DESC if it is present in labels
-            if "DESC" in labels and labels["DESC"] >= rows * 0.50:
-                winning_tag = "LIT"
-                winning_type = "DESC"
-                winning_datatype = "STRING"
-            else:
-                winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
+            # Determine preliminary classification
+            winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
 
+            # If preliminary classification is STRING and not confidently identified (pure STRING), use lookup to refine
+            if winning_datatype == "STRING" and not (labels.get("URL") or labels.get("EMAIL")):
+                combined_scores = []
+                entity_types = defaultdict(int)
+                type_details = defaultdict(list)
+                for cell in column:
+                    lookup_result = self.lookup_retriever.search(cell)
+                    if lookup_result:
+                        sorted_lookup_result = sorted(
+                            lookup_result[cell], 
+                            key=lambda x: (x['ed_score'] + x['jaccard_score']) / 2,
+                            reverse=True
+                        )[:3]  # Top 3 results after sorting
+                        for entity in sorted_lookup_result:
+                            combined_scores.append((entity['ed_score'] + entity['jaccard_score']) / 2)
+                            for entity_type in entity['types']:
+                                update_dict(entity_types, entity_type['name'])
+                                type_details[entity_type['name']].append({
+                                    'id': entity_type['id'],
+                                    'name': entity_type['name']
+                                })
+                
+                if combined_scores and sum(combined_scores) / len(combined_scores) >= 0.75:
+                    winning_tag = "NE"
+                    winning_type = "ENTITY"
+                    winning_datatype = "ENTITY"
+                    # Get the top 3 most frequent entity types with their scores
+                    most_frequent_types = sorted(entity_types.items(), key=lambda x: x[1], reverse=True)
+                    probable_types = [{'id': type_details[t[0]][0]['id'], 'name': t[0], 'frequency': t[1]} for t in most_frequent_types]
+                else:
+                    winning_tag = "LIT"
+                    winning_type = "STRING"
+                    winning_datatype = "STRING"
+                    probable_types = None
+            
             final_result[index] = {
                 'index_column': index,
                 'tag': winning_tag,
@@ -128,39 +121,39 @@ class ColumnAnalysis:
                 'datatype': winning_datatype,
                 'column_rows': column
             }
+
+            if winning_tag == "NE":
+                final_result[index]['type_estimation'] = probable_types
+        
         return final_result
     
+    def check_literal(self, cell):
+        # Implement literal check logic here
+        if "@" in cell and "." in cell:
+            return "EMAIL"
+        elif cell.startswith("http://") or cell.startswith("https://"):
+            return "URL"
+        elif any(char.isdigit() for char in cell):
+            try:
+                float(cell)
+                return "FLOAT" if "." in cell else "INTEGER"
+            except:
+                pass
+        return "STRING"
+
     def _get_winning_data_and_datatype(self, tags, labels, rows):
-        winning_tag = "NE"
+        winning_tag = "LIT" if tags["LIT"] >= tags["NE"] else "NE"
         winning_type = None
         winning_datatype = "STRING"
-        
-        if tags["LIT"] + tags["NE"] == 0:
-            winning_tag = "NE"
-            winning_datatype = "STRING"
-        elif tags["NE"] > rows * 0.40:
-            winning_tag = "NE"
-        elif tags["LIT"] >= tags["NE"]:
-            winning_tag = "LIT"
-        elif tags["NE"] <= rows * 0.40:
-            winning_tag = "LIT"    
-    
-        if labels.get("DATE") == labels.get("CARDINAL"):
-            if "CARDINAL" in labels:
-                labels["CARDINAL"] += 1
         
         if winning_tag == "LIT":
             new_labels = {label: labels.get(label, 0) for label in self.LIT_DATATYPE}
             label_max = max(new_labels, key=new_labels.get, default=None)
-            if labels.get(label_max, 0) >= rows * 0.50 and winning_datatype is None:
+            if labels.get(label_max, 0) >= rows * 0.50:
                 winning_type = label_max    
             else:
                 winning_type = "STRING"
-        else:
-            new_labels = {label: labels.get(label, 0) for label in self.NE_DATATYPE}
-            label_max = max(new_labels, key=new_labels.get, default=None)
-            winning_type = label_max  
 
-        winning_datatype = self.LIT_DATATYPE.get(winning_type, "STRING")
+        winning_datatype = self.LIT_DATATYPE.get(winning_type)
        
         return winning_tag, winning_type, winning_datatype
