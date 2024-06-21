@@ -88,7 +88,7 @@ class ColumnAnalysis:
             winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
 
             # If preliminary classification is STRING and not confidently identified (pure STRING), use lookup to refine
-            if winning_datatype == "STRING" and not (labels.get("URL") or labels.get("EMAIL")):
+            if winning_datatype == "STRING" and not (labels.get("URL") or labels.get("EMAIL")) or winning_datatype == None:
                 combined_scores = []
                 entity_types = defaultdict(int)
                 type_details = defaultdict(list)
@@ -111,7 +111,7 @@ class ColumnAnalysis:
                                     'name': entity_type['name']
                                 })
                 
-                if combined_scores and sum(combined_scores) / len(combined_scores) >= 0.75:
+                if combined_scores and sum(combined_scores) / len(combined_scores) >= 0.65:
                     winning_tag = "NE"
                     winning_type = "ENTITY"
                     winning_datatype = "ENTITY"
