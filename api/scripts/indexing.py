@@ -98,27 +98,44 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
     buffer = []
     index = 0
     for item in tqdm(results, total=total_docs):
-        doc = {
-            "_op_type": "index",
-            "_index": index_name,
-            "_id": index,
-        }
-        # Add fields dynamically based on the mapping
-        for field in mapping["mappings"]["properties"]:
-            doc[field] = item.get(field, "")
-            if field == "name" and mapping["mappings"]["properties"][field]["type"] == "text":
-                if item.get("NERtype") == "PERS" and "labels" in item:
-                    name = item["labels"].get("en")
-                    if name is not None:
-                        name_abbrevations = generate_dot_notation_options(name)
-                        doc[field] = list(set(doc[field] + name_abbrevations))
-        
-        buffer.append(doc)
-        index += 1
+        id_entity = item["entity"]
+        names = list(item["labels"].values())
+        aliases = [alias for lang in item.get("aliases", {}).values() for alias in lang]
+        names = list(set(names + aliases))
+        description = item.get("description", {}).get("value", "")
+        NERtype = item["NERtype"]
+        types = item.get("types", {}).get("P31", [])
+        kind = item["kind"]
+        popularity = int(item["popularity"])
 
-        if len(buffer) >= batch_size:
-            index_documents(es, buffer)
-            buffer = []
+        if NERtype == "PERS":
+            name = item["labels"].get("en")
+            if name is not None:
+                name_abbreviations = generate_dot_notation_options(name)
+                names = list(set(names + name_abbreviations))
+
+        for name in names:
+            doc = {
+                "_op_type": "index",
+                "_index": index_name,
+                "_id": index,
+                "id": id_entity,
+                "name": name,
+                "description": description,
+                "kind": kind,
+                "NERtype": NERtype,
+                "types": " ".join(types),
+                "length": len(name),
+                "ntoken": len(name.split(' ')),
+                "popularity": round(popularity / max_popularity, 2)
+            }
+            
+            index += 1 
+            buffer.append(doc)
+
+            if len(buffer) >= batch_size:
+                index_documents(es, buffer)
+                buffer = []
                 
     if len(buffer) > 0:
         index_documents(es, buffer)
