@@ -15,7 +15,7 @@ class SameasRetriever:
         sameas_retrieved = self.get_sameas(entities=entities, kg = kg)
         wiki_entity_objects = {}
         for item in sameas_retrieved:
-            entity_id = item['wikidata_id']
+            entity_id = item['entity']
             wiki_entity_objects[entity_id] = item['URLS']
         final_response = wiki_entity_objects
 
