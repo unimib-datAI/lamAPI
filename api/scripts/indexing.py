@@ -53,7 +53,7 @@ def generate_dot_notation_options(name):
 
 def create_elasticsearch_client(endpoint, port):
     return Elasticsearch(
-        hosts=[{"host": endpoint, "port": int(port)}],
+        hosts=f'http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
         request_timeout=60,
         max_retries=10, 
         retry_on_timeout=True
