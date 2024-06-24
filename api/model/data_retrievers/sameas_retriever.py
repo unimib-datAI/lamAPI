@@ -6,7 +6,7 @@ class SameasRetriever:
 
 
     def get_sameas(self, entities = [], kg = "wikidata"):
-        return self.database.get_requested_collection("items", kg).find({'wikidata_id': {'$in': list(entities)}})
+        return self.database.get_requested_collection("items", kg).find({'entity': {'$in': list(entities)}})
         
         
     def get_sameas_output(self, entities = [], kg = "wikidata"):
