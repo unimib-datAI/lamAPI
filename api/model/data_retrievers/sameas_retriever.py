@@ -16,7 +16,7 @@ class SameasRetriever:
         wiki_entity_objects = {}
         for item in sameas_retrieved:
             entity_id = item['entity']
-            wiki_entity_objects[entity_id] = item['URLS']
+            wiki_entity_objects[entity_id] = item['URLs']
         final_response = wiki_entity_objects
 
         return final_response
