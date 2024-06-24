@@ -38,21 +38,21 @@ class ColumnAnalysis:
             for cell in column:
                 label = None
                 
-                # Check if the cell is a date
+                # Check if the cell is a number 
                 try:
-                    dateutil.parser.parse(cell, fuzzy=False)
-                    label = "DATE"
+                    float(cell)
+                    label = "CARDINAL"
                 except:
                     pass
-                
-                # Check if the cell is a number if it's not already identified as a date
+
+                # Check if the cell is a date if it's not already identified as a number
                 if not label:
                     try:
-                        float(cell)
-                        label = "CARDINAL"
+                        dateutil.parser.parse(cell, fuzzy=False)
+                        label = "DATE"
                     except:
                         pass
-                
+                 
                 # Check for other types
                 if not label:
                     if len(cell.split(" ")) >= 20:
