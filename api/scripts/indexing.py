@@ -90,7 +90,7 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
         print(f"Index {index_name} exists. Deleting it...")
         es.indices.delete(index=index_name)
     print(f"Creating index {index_name}...")
-    es.indices.create(index=index_name, body={"settings": mapping["settings"], "mappings": mapping["mappings"]})
+    es.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
 
     total_docs = documents_c.estimated_document_count()
     results = documents_c.find({})
