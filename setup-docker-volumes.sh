@@ -2,12 +2,8 @@
 
 # Define all directories to be created
 dirs=(
-  "./api"
   "./mongo-data"
-  "./certs"
-  "./esdata01"
-  "./esdata02"
-  "./esdata03"
+  "./elasticdata"
   "./kibanadata"
 )
 

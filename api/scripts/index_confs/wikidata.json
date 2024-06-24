@@ -1,4 +1,4 @@
-MAPPING = {
+{
     "settings": {
         "index": {
             "number_of_shards": 3,
@@ -15,10 +15,10 @@ MAPPING = {
                 }
             }
         }
-    }, 
+    },
     "mappings": {
         "properties": {
-            "id": {"type": "text"},
+            "id": {"type": "keyword"},
             "name": {
                 "type": "text",
                 "analyzer": "my_analyzer"
@@ -33,4 +33,3 @@ MAPPING = {
         }
     }
 }
-

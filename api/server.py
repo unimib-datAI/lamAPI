@@ -22,10 +22,6 @@ from model.database import Database
 
 database = Database()
 
-
-with open("query_templates.json") as f:
-    template = json.loads(f.read())
-
 # instance objects
 params_validator = ParamsValidator()
 type_retriever = TypesRetriever(database)
