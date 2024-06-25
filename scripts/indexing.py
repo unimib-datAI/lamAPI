@@ -98,29 +98,42 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
     buffer = []
     index = 0
     for item in tqdm(results, total=total_docs):
-        id_entity = item["entity"]
-        names = list(item["labels"].values())
-        aliases = [alias for lang in item.get("aliases", {}).values() for alias in lang]
-        names = list(set(names + aliases))
-        description = item.get("description", {}).get("value", "")
-        NERtype = item["NERtype"]
+        id_entity = item.get("entity")
+        labels = item.get("labels", {})
+        aliases = item.get("aliases", {})
+        description = item.get("description", {}).get("value", None)
+        NERtype = item.get("NERtype", None)
         types = item.get("types", {}).get("P31", [])
-        kind = item["kind"]
-        popularity = int(item["popularity"])
+        kind = item.get("kind", None)
+        popularity = int(item.get("popularity", 0))
+
+        all_names = []
+        for lang, name in labels.items():
+            all_names.append({"name": name, "lang": lang, "is_alias": False})
+
+        for lang, alias_list in aliases.items():
+            for alias in alias_list:
+                all_names.append({"name": alias, "lang": lang, "is_alias": True})
 
         if NERtype == "PERS":
-            name = item["labels"].get("en")
+            name = labels.get("en-us")
             if name is not None:
                 name_abbreviations = generate_dot_notation_options(name)
-                names = list(set(names + name_abbreviations))
+                for abbrev in name_abbreviations:
+                    all_names.append({"name": abbrev, "lang": "en-us", "is_alias": True})
 
-        for name in names:
+        for name_entry in all_names:
+            name = name_entry["name"]
+            lang = name_entry["lang"]
+            is_alias = name_entry["is_alias"]
             doc = {
                 "_op_type": "index",
                 "_index": index_name,
                 "_id": index,
                 "id": id_entity,
                 "name": name,
+                "lang": lang,
+                "is_alias": is_alias,
                 "description": description,
                 "kind": kind,
                 "NERtype": NERtype,

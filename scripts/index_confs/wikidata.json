@@ -23,10 +23,12 @@
                 "type": "text",
                 "analyzer": "my_analyzer"
             },
+            "language": {"type": "keyword"},
+            "is_alias": {"type": "boolean"},
             "description": {"type": "text"},
             "kind": {"type": "keyword"},
             "NERtype": {"type": "keyword"},
-            "types": {"type": "keyword"},
+            "types": {"type": "text"},
             "length": {"type": "long"},
             "ntoken": {"type": "long"},
             "popularity": {"type": "double"}
