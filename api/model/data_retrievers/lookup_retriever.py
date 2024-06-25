@@ -26,10 +26,6 @@ class LookupRetriever:
         if query is not None:
             query = json.loads(query)
             result, _ = self.elastic_retriever.search(query, kg, limit)
-            #ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
-            #types_id_to_name = self._get_types_id_to_name(ids, kg)
-            #for entity in result:
-            #    entity["types"] = [{"id": id_type, "name": types_id_to_name.get(id_type)} for id_type in entity["types"].split(" ")]
             result = self._get_final_candidates_list(result, mention_clean, kg, None, 
                                                               None, ntoken_mention, length_mention, NER=True)    
             return result
