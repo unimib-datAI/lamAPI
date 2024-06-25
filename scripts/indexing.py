@@ -124,7 +124,7 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
 
         for name_entry in all_names:
             name = name_entry["name"]
-            language = name_entry["lang"]
+            language = name_entry["language"]
             is_alias = name_entry["is_alias"]
             doc = {
                 "_op_type": "index",
