@@ -12,7 +12,7 @@ from elasticsearch.helpers import bulk, BulkIndexError
 from pymongo import MongoClient
 from tqdm import tqdm
 
-from conf import MAPPING
+from api.scripts.mappings.conf import MAPPING
 
 
 

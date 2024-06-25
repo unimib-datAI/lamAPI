@@ -1,4 +1,3 @@
-import json
 import traceback
 import logging
 from flask import Flask, request
@@ -22,10 +21,6 @@ from model.database import Database
 
 database = Database()
 
-
-with open("query_templates.json") as f:
-    template = json.loads(f.read())
-
 # instance objects
 params_validator = ParamsValidator()
 type_retriever = TypesRetriever(database)
@@ -35,8 +30,8 @@ labels_retriever = LabelsRetriever(database)
 literal_classifier = LiteralClassifier()
 literals_retriever = LiteralsRetriever(database)
 sameas_retriever = SameasRetriever(database)
-column_analysis_classifier = ColumnAnalysis()
 lookup_retriever = LookupRetriever(database)
+column_analysis_classifier = ColumnAnalysis(lookup_retriever)
 ner_recognition = NERRecognizer()
 summary_retriever = SummaryRetriever(database)
 

@@ -1,6 +1,5 @@
 import os
 import time
-import subprocess
 import json
 import sys
 import traceback
@@ -11,10 +10,6 @@ from elasticsearch.helpers import bulk, BulkIndexError
 
 from pymongo import MongoClient
 from tqdm import tqdm
-
-from conf import MAPPING
-
-
 
 def index_documents(es, buffer, max_retries=5):
     for attempt in range(max_retries):
@@ -38,8 +33,6 @@ def index_documents(es, buffer, max_retries=5):
     else:
         print("Max retries exceeded. Failed to index some documents.")
 
-
-        
 def generate_dot_notation_options(name):
     words = name.split()
     num_words = len(words)
@@ -58,106 +51,80 @@ def generate_dot_notation_options(name):
     
     return options
 
+def create_elasticsearch_client(endpoint, port):
+    return Elasticsearch(
+        hosts=f'http://{endpoint}:{port}',
+        request_timeout=60,
+        max_retries=10, 
+        retry_on_timeout=True
+    )
 
-ELASTIC_USER = os.environ["ELASTICSEARCH_USERNAME"]
-ELASTIC_PW = os.environ["ELASTIC_PASSWORD"]
-ELASTIC_LIMITS = 100
-ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
+def create_mongo_client(endpoint, port, username, password):
+    return MongoClient(endpoint, int(port), username=username, password=password)
 
-try:
-    db_name = sys.argv[1:][0]
-    kg_name = match = re.match(r"([a-zA-Z]+)(\d+)", db_name).group(1)
-except:
-    sys.exit("Please provide a DB name as argument")
+def print_usage():
+    print("Usage:")
+    print("  python indexing_script.py index <DB_NAME> <COLLECTION_NAME> <MAPPING_FILE>")
+    print("  python indexing_script.py status")
+    print("  python indexing_script.py list_databases")
+    print("  python indexing_script.py list_collections <DB_NAME>")
+    print("Parameters:")
+    print("  <DB_NAME>          : The name of the MongoDB database.")
+    print("  <COLLECTION_NAME>  : The name of the MongoDB collection to index.")
+    print("  <MAPPING_FILE>     : The path to the Elasticsearch mapping JSON file.")
 
-bashCommand = """
-                openssl s_client -connect es01:9200 -servername es01 -showcerts </dev/null 2>/dev/null | 
-                openssl x509 -fingerprint -sha256 -noout -in /dev/stdin
-            """
-p = subprocess.Popen(
-    bashCommand, 
-    stdout=subprocess.PIPE, shell=True)
-output = p.communicate()
-fingerprint = output[0].decode("UTF-8")
-CERT_FINGERPRINT = fingerprint.split("=")[1][0:-1]
+def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=10000):
+    documents_c = mongo_client[db_name][collection_name]
 
-
-try:
-    MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
-    MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
-    MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
-    client = MongoClient(MONGO_ENDPOINT, int(MONGO_ENDPOINT_PORT), username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
-    documents_c = client[db_name].items
-    
-
-    BATCH = 10000
     # Find the document with the maximum popularity value
     max_popularity_doc = documents_c.find_one(sort=[("popularity", -1)])
-
-    # Check if there's a result
     if max_popularity_doc:
         max_popularity = max_popularity_doc["popularity"]
         print(f"The maximum popularity is: {max_popularity}")
     else:
         raise Exception("No documents found in the collection or popularity field is missing.")
 
-    es = Elasticsearch(
-                hosts=f'https://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
-                request_timeout=60,
-                max_retries=10, 
-                retry_on_timeout=True,
-                basic_auth=(ELASTIC_USER, ELASTIC_PW),
-                ssl_assert_fingerprint=CERT_FINGERPRINT
-            )
+    # Create the index in Elasticsearch, using db_name without trailing numbers
+    index_name = re.sub(r'\d+$', '', db_name)
+    if es.indices.exists(index=index_name):
+        print(f"Index {index_name} exists. Deleting it...")
+        es.indices.delete(index=index_name)
+    print(f"Creating index {index_name}...")
+    es.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
 
-
-    
-    resp = es.options(ignore_status=[400]).indices.create(
-        index="wikidata",
-        settings=MAPPING["settings"],
-        mappings=MAPPING["mappings"],
-    )
-
-
-    TOTAL_DOCS = documents_c.estimated_document_count()
+    total_docs = documents_c.estimated_document_count()
     results = documents_c.find({})
-
+    
     buffer = []
     index = 0
-    for i, item in enumerate(tqdm(results, total=TOTAL_DOCS)):
+    for item in tqdm(results, total=total_docs):
         id_entity = item["entity"]
-        names = list((item["labels"].values()))
-        aliases = [alias for lang in item["aliases"] for alias in lang]
+        names = list(item["labels"].values())
+        aliases = [alias for lang in item.get("aliases", {}).values() for alias in lang]
         names = list(set(names + aliases))
-        description = ""
-        if "value" in item["description"]:
-            description = item["description"].get("value", "")
-        
-
+        description = item.get("description", {}).get("value", "")
         NERtype = item["NERtype"]
-        types = item["types"] 
-        kind = item["kind"] 
+        types = item.get("types", {}).get("P31", [])
+        kind = item["kind"]
         popularity = int(item["popularity"])
-        
-        
+
         if NERtype == "PERS":
             name = item["labels"].get("en")
             if name is not None:
-                name_abbrevations = generate_dot_notation_options(name)
-                names = list(set(names + name_abbrevations))
+                name_abbreviations = generate_dot_notation_options(name)
+                names = list(set(names + name_abbreviations))
 
-
-        for j, name in enumerate(names):
+        for name in names:
             doc = {
-                "_op_type":"index",
-                "_index": "wikidata",
+                "_op_type": "index",
+                "_index": index_name,
                 "_id": index,
                 "id": id_entity,
                 "name": name,
                 "description": description,
-                "kind":  kind,
-                "NERtype":  NERtype,
-                "types":  " ".join(types["P31"]),
+                "kind": kind,
+                "NERtype": NERtype,
+                "types": " ".join(types),
                 "length": len(name),
                 "ntoken": len(name.split(' ')),
                 "popularity": round(popularity / max_popularity, 2)
@@ -166,18 +133,85 @@ try:
             index += 1 
             buffer.append(doc)
 
-            if len(buffer) >= BATCH:
+            if len(buffer) >= batch_size:
                 index_documents(es, buffer)
                 buffer = []
                 
-
     if len(buffer) > 0:
         index_documents(es, buffer)
-        buffer = []
 
-    print('All Finished') 
-except Exception as e:
-    print(e)
-    traceback.print_exc()  # This will print the full traceback
-    print("An error occurred. Exiting...")
-    sys.exit(1)
+def show_status(mongo_client, es):
+    print("MongoDB Status:")
+    print(mongo_client.server_info())
+    print("\nElasticsearch Status:")
+    print(es.info())
+
+def list_databases(mongo_client):
+    print("Available Databases:")
+    for db in mongo_client.list_database_names():
+        print(f"  - {db}")
+
+def list_collections(mongo_client, db_name):
+    if db_name in mongo_client.list_database_names():
+        print(f"Collections in database '{db_name}':")
+        for coll in mongo_client[db_name].list_collection_names():
+            print(f"  - {coll}")
+    else:
+        print(f"Database '{db_name}' not found.")
+
+def main():
+    if len(sys.argv) < 2:
+        print_usage()
+        sys.exit(1)
+
+    action = sys.argv[1]
+
+    ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
+    MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
+    MONGO_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
+    MONGO_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
+
+    es = create_elasticsearch_client(ELASTIC_ENDPOINT, ELASTIC_PORT)
+    mongo_client = create_mongo_client(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT, MONGO_USERNAME, MONGO_PASSWORD)
+
+    try:
+        if action == "index":
+            if len(sys.argv) != 5:
+                print_usage()
+                sys.exit(1)
+            
+            db_name = sys.argv[2]
+            collection_name = sys.argv[3]
+            mapping_file = sys.argv[4]
+
+            with open(mapping_file, 'r') as file:
+                mapping = json.load(file)
+
+            index_data(es, mongo_client, db_name, collection_name, mapping)
+            print('All Finished')
+
+        elif action == "status":
+            show_status(mongo_client, es)
+        
+        elif action == "list_databases":
+            list_databases(mongo_client)
+
+        elif action == "list_collections":
+            if len(sys.argv) != 3:
+                print_usage()
+                sys.exit(1)
+            db_name = sys.argv[2]
+            list_collections(mongo_client, db_name)
+
+        else:
+            print_usage()
+            sys.exit(1)
+
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+        print("An error occurred. Exiting...")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
