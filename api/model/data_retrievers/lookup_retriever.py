@@ -26,10 +26,12 @@ class LookupRetriever:
         if query is not None:
             query = json.loads(query)
             result, _ = self.elastic_retriever.search(query, kg, limit)
-            ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
-            types_id_to_name = self._get_types_id_to_name(ids, kg)
-            for entity in result:
-                entity["types"] = [{"id": id_type, "name": types_id_to_name.get(id_type)} for id_type in entity["types"].split(" ")]
+            #ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
+            #types_id_to_name = self._get_types_id_to_name(ids, kg)
+            #for entity in result:
+            #    entity["types"] = [{"id": id_type, "name": types_id_to_name.get(id_type)} for id_type in entity["types"].split(" ")]
+            result = self._get_final_candidates_list(result, mention_clean, kg, None, 
+                                                              None, ntoken_mention, length_mention, NER=True)    
             return result
 
         if types is not None:
@@ -105,7 +107,7 @@ class LookupRetriever:
         corrects_tokens = round(len(tokens_mention.intersection(tokens_set)) / len(tokens_mention), 3)
         return ambiguity_mention, corrects_tokens
     
-    def _get_final_candidates_list(self, result, mention_clean, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention):
+    def _get_final_candidates_list(self, result, mention_clean, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention, NER=False):
         ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
         types_id_to_name = self._get_types_id_to_name(ids, kg)
 
@@ -134,6 +136,10 @@ class LookupRetriever:
                 "jaccard_score": jaccard_score,
                 "jaccardNgram_score": jaccard_ngram_score
             }
+            if NER:
+                obj["kind"] = entity["kind"]
+                obj["NERtype"] = entity["NERtype"]
+
             if id_entity not in history:
                 history[id_entity] = obj
             elif (ed_score+jaccard_score) > (history[id_entity]["ed_score"]+history[id_entity]["jaccard_score"]):
