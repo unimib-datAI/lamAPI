@@ -109,22 +109,22 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
 
         all_names = []
         for lang, name in labels.items():
-            all_names.append({"name": name, "lang": lang, "is_alias": False})
+            all_names.append({"name": name, "language": lang, "is_alias": False})
 
         for lang, alias_list in aliases.items():
             for alias in alias_list:
-                all_names.append({"name": alias, "lang": lang, "is_alias": True})
+                all_names.append({"name": alias, "language": lang, "is_alias": True})
 
         if NERtype == "PERS":
             name = labels.get("en-us")
             if name is not None:
                 name_abbreviations = generate_dot_notation_options(name)
                 for abbrev in name_abbreviations:
-                    all_names.append({"name": abbrev, "lang": "en-us", "is_alias": True})
+                    all_names.append({"name": abbrev, "language": "en-us", "is_alias": True})
 
         for name_entry in all_names:
             name = name_entry["name"]
-            lang = name_entry["lang"]
+            language = name_entry["lang"]
             is_alias = name_entry["is_alias"]
             doc = {
                 "_op_type": "index",
@@ -132,7 +132,7 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
                 "_id": index,
                 "id": id_entity,
                 "name": name,
-                "lang": lang,
+                "language": language,
                 "is_alias": is_alias,
                 "description": description,
                 "kind": kind,
