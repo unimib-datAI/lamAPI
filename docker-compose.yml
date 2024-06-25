@@ -15,6 +15,7 @@ services:
     restart: always
     volumes:
       - ./api/:/app
+      - ./scripts/:/scripts
   
   mongo:
     image: mongo:${MONGO_VERSION}

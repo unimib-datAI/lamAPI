@@ -96,4 +96,5 @@ services:
       - ./work:/home/jovyan/work
       - ./api:/home/jovyan/work/api
       - ${VOLUME_MY_DATA_PATH}:/home/jovyan/work/my-data
+      - ./scripts:/home/jovyan/work/scripts
       
