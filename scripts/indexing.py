@@ -116,11 +116,11 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=1
                 all_names.append({"name": alias, "language": lang, "is_alias": True})
 
         if NERtype == "PERS":
-            name = labels.get("en-us")
+            name = labels.get("en")
             if name is not None:
                 name_abbreviations = generate_dot_notation_options(name)
                 for abbrev in name_abbreviations:
-                    all_names.append({"name": abbrev, "language": "en-us", "is_alias": True})
+                    all_names.append({"name": abbrev, "language": "en", "is_alias": True})
 
         for name_entry in all_names:
             name = name_entry["name"]
