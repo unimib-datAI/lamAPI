@@ -1,9 +1,10 @@
 import os
-from model.utils import get_kgs, build_error
+from model.utils import build_error
 
 ACCESS_TOKEN = os.environ["LAMAPI_TOKEN"]
 
-class ParamsValidator():
+
+class ParamsValidator:
     def validate_token(self, token):
         if token != ACCESS_TOKEN:
             return False, build_error("Invalid access token", 403)
@@ -25,17 +26,17 @@ class ParamsValidator():
         try:
             limit = int(limit)
             return True, limit
-        except Exception as e:
+        except Exception:
 
-            return False, build_error("limit parameter cannot be converted to int", 400) 
+            return False, build_error("limit parameter cannot be converted to int", 400)
 
     def validate_k(self, k):
         try:
             int(k)
             return True, None
-        except Exception as e:
+        except Exception:
 
-            return False, build_error("k parameter cannot be converted to int", 400) 
+            return False, build_error("k parameter cannot be converted to int", 400)
 
     def validate_bool(self, string_value):
         if string_value is not None:

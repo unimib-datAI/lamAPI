@@ -1,5 +1,6 @@
 import spacy
 
+
 class NERRecognizer:
 
     def __init__(self):
@@ -14,8 +15,15 @@ class NERRecognizer:
             ner = []
             for ent in doc.ents:
                 print(ent.text, ent.start_char, ent.end_char, ent.label_)
-                ner.append({'mention': ent.text, 'classification': ent.label_, 'start_index': ent.start_char, 'end_index': ent.end_char})
-            
+                ner.append(
+                    {
+                        "mention": ent.text,
+                        "classification": ent.label_,
+                        "start_index": ent.start_char,
+                        "end_index": ent.end_char,
+                    }
+                )
+
             final_response[f"{index}"] = {"text": text, "ner": ner}
 
         return final_response

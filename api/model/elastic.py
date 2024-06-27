@@ -15,10 +15,7 @@ class Elastic:
         retry = 0
         while retry < max_retry:
             try:
-                es = Elasticsearch(
-                    hosts=f'http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
-                    request_timeout=60
-                )
+                es = Elasticsearch(hosts=f"http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}", request_timeout=60)
                 if es.ping():
                     print("Connected to Elasticsearch")
                     return es
@@ -31,17 +28,19 @@ class Elastic:
             sleep(delay)
         raise Exception("Failed to connect to Elasticsearch after multiple attempts")
 
-    
-    def search(self, body, kg="wikidata", limit=100):
+    def search(self, body, kg="wikidata", limit=1000):
         try:
+            print(f"Searching {kg} with body: {body['query']}", flush=True)
             query_result = self._elastic.search(index=kg, query=body["query"], size=limit)
+            print(f"Search result: {query_result}", flush=True)
             hits = query_result["hits"]["hits"]
             max_score = query_result["hits"]["max_score"]
+            
             if len(hits) == 0:
-                return [], {}
+                return []
 
             new_hits = []
-           
+
             for i, hit in enumerate(hits):
                 new_hit = {
                     "id": hit["_source"]["id"],
@@ -52,7 +51,7 @@ class Elastic:
                     "pos_score": round((i + 1) / len(hits), 3),
                     "es_score": round(hit["_score"] / max_score, 3),
                     "ntoken_entity": hit["_source"]["ntoken"],
-                    "length_entity": hit["_source"]["length"]
+                    "length_entity": hit["_source"]["length"],
                 }
                 if "kind" in hit["_source"]:
                     new_hit["kind"] = hit["_source"]["kind"]
@@ -61,4 +60,4 @@ class Elastic:
             return new_hits
         except ConnectionError as e:
             print(f"Search connection error: {e}", flush=True)
-            return [], {}
+            return []
