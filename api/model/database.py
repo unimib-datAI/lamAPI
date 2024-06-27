@@ -39,7 +39,7 @@ class Database:
     def create_indexes(self):
         # Specify the collections and their respective fields to be indexed
         index_specs = {
-            "cache": ["name", "lastAccessed"],  # Example: Indexing 'cell' and 'type' fields in 'cache' collection
+            "cache": ["name", "lastAccessed"],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
             "items": ["id_entity", "entity", "category", "popularity"],
             "literals": ["id_entity", "entity"],
             "objects": ["id_entity", "entity"],
@@ -62,11 +62,16 @@ class Database:
                             ("language", 1),
                         ],
                         unique=True,
+                        background=True,  # Create the index in the background
                     )
                 elif collection == "items":
-                    db[collection].create_index([("entity", 1), ("kind", 1)], unique=True)
+                    db[collection].create_index(
+                        [("entity", 1), ("kind", 1)],
+                        unique=True,
+                        background=True,  # Create the index in the background
+                    )
                 for field in fields:
-                    db[collection].create_index([(field, 1)])  # 1 for ascending order
+                    db[collection].create_index([(field, 1)], background=True)  # 1 for ascending order, background indexing
 
     def get_supported_kgs(self):
         return self.mappings
