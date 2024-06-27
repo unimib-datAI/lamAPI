@@ -25,7 +25,7 @@
             },
             "language": {"type": "keyword"},
             "is_alias": {"type": "boolean"},
-            "description": {"type": "text"},
+            "description": {"type": "text", "index": false},
             "kind": {"type": "keyword"},
             "NERtype": {"type": "keyword"},
             "types": {"type": "text"},

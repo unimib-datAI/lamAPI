@@ -1,5 +1,4 @@
 import os
-import json
 from elasticsearch import Elasticsearch, ConnectionError
 from time import sleep
 
@@ -42,7 +41,6 @@ class Elastic:
                 return [], {}
 
             new_hits = []
-            index_sources = {}
            
             for i, hit in enumerate(hits):
                 new_hit = {
@@ -60,9 +58,7 @@ class Elastic:
                     new_hit["kind"] = hit["_source"]["kind"]
                     new_hit["NERtype"] = hit["_source"]["NERtype"]
                 new_hits.append(new_hit)
-                index_sources[hit["_source"]["id"]] = hit["_index"]
-
-            return new_hits, index_sources
+            return new_hits
         except ConnectionError as e:
             print(f"Search connection error: {e}", flush=True)
             return [], {}

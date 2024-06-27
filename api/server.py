@@ -170,18 +170,19 @@ class BaseEndpoint(Resource):
 
 @lookup.route('/entity-retrieval')
 @api.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     params={
         "name": "Name to look for (e.g., Batman Begins).",
-        "limit": "The number of entities to be retrieved. The default value is 100.",
-        "token": "Private token to access the API.",
-        "description": "Contextual text to match the descriptions of the entities",
-        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>.",
+        "limit": "The number of entities to be retrieved. The default value is 1000.",
+        "kind": "Kind of Named Entity to be matched. Available values: <code>entity</code>, <code>disambiguation</code>, <code>type</code> and <code>predicate</code>.",
+        "NERtype": "Type of Named Entity to be matched. Available values: <code>LOC</code>, <code>ORG</code>, <code>PERS</code> and <code>OTHERS</code>.",
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
         "fuzzy": "Set this param to True if fuzzy search must be applied. Default is <code>False</code>.",
         "types": "Types to be matched in the Knowledge Graph as constraint in the retrieval. Add Types separeted by spaces. E.g. Scientist Philosopher Person",
         "ids": "Ids of the entity",
-        "query": "Query to be used to test elastic search. Default is <code>None</code>."
+        "language": "Language to filter the labels. For example, <code>en</code> for English. Default is <code>None</code>.",
+        "query": "Query to be used to test elastic search. Default is <code>None</code>.",
+        "token": "Private token to access the API.",
     },
     description="Given a string as input, the endpoint performs a search in the specified Knowledge Graph."
 )
@@ -191,21 +192,25 @@ class Lookup(BaseEndpoint):
         parser.add_argument('name', type=str, location="args")
         parser.add_argument('limit', type=str, location="args")
         parser.add_argument('token', type=str, location="args")
-        parser.add_argument('description', type=str, location="args")
+        parser.add_argument('kind', type=str, location="args")
+        parser.add_argument('NERtype', type=str, location="args")
         parser.add_argument('kg', type=str, location="args")
         parser.add_argument('fuzzy', type=str, location="args")
         parser.add_argument('types', type=str, location="args")
         parser.add_argument('ids', type=str, location="args")
+        parser.add_argument('language', type=str, location="args")
         parser.add_argument('query', type=str, location="args")
         args = parser.parse_args()
 
         name = args["name"]
         limit = args["limit"]
         token = args["token"]
-        description = args["description"]
         kg = args["kg"]
         fuzzy = args["fuzzy"]
         types = args["types"]
+        kind = args["kind"]
+        NERtype = args["NERtype"]
+        language = args["language"]
         ids = args["ids"]
         query = args["query"]
         
@@ -218,8 +223,8 @@ class Lookup(BaseEndpoint):
         if not is_fuzzy_valid:
             return fuzzy_value
 
-
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
+        print("kg", kg, kg_is_valid, kg_error_or_value, flush=True)
         if not kg_is_valid:
             return kg_error_or_value
        
@@ -231,19 +236,21 @@ class Lookup(BaseEndpoint):
             return build_error("Name is required", 400)
 
         try:
-            results = lookup_retriever.search(name, limit=limit_error_or_value, kg=kg_error_or_value, 
-                                                fuzzy=fuzzy_value, types=types, ids=ids, query=query)
+            results = lookup_retriever.search(name=name, limit=limit, kg=kg, fuzzy=fuzzy_value, types=types, 
+                                              kind=kind, NERtype=NERtype, language=language, ids=ids, query=query)
         except Exception as e:
-            return build_error(f"Elastic error: {str(e)}", 400, traceback=traceback.format_exc())
+            return build_error(str(e), 400, traceback=traceback.format_exc())
 
         return results
 
 
 @entity.route('/types')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns the associated TYPES for each entity.',
-    params={"token": "Private token to access the APIs.",
-            "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>."}
 )
 class Types(BaseEndpoint):
     @entity.doc(body=fields_types)
@@ -274,6 +281,7 @@ class Types(BaseEndpoint):
 
 @entity.route('/objects')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of OBJECTS for each entity.',
     params={"token": "Private token to access the APIs.",
             "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
@@ -312,6 +320,7 @@ class Objects(BaseEndpoint):
 
 @entity.route('/predicates')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of PREDICATES between each pair of entities (SUBJECT and OBJECT).',
     params={"token": "Private token to access the APIs.",
             "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
@@ -345,6 +354,7 @@ class Predicates(BaseEndpoint):
 
 @entity.route('/labels')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input composed of DBpedia or Wikidata entities, the endpoint returns a list of LABELS and ALIASES for each entity. It\'s also possible to specify the language to filter the labels.',
     params={"token": "Private token to access the APIs.",
             "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
@@ -408,6 +418,7 @@ class SameAs(BaseEndpoint):
 
 @classify.route('/literal-recognizer')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description="""
     Given a JSON array as input composed of a set of strings, the endpoint returns the types of literal. The list of literals recognized is:
     **DATE**:
@@ -465,6 +476,7 @@ class LiteralRecognizer(BaseEndpoint):
 
 @entity.route('/literals')
 @entity.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input made of DBpedia or Wikipedia entities, the endpoint returns the list of LITERALS classified as DATETIME, NUMBER or STRING for each entity.',
     params={"token": "Private token to access the APIs.",
             "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
@@ -498,6 +510,7 @@ class Literals(BaseEndpoint):
 
 @sti.route('/column-analysis')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input composed of a set of array of strings (cell content), the endpoint calculates, for each array, if the content represents named-entitites or literals.',
     params={"token": "Private token to access the APIs."}
 )
@@ -525,6 +538,7 @@ class ColumnAnalysis(BaseEndpoint):
 
 @classify.route('/name-entity-recognition')
 @api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description='Given a JSON array as input composed of a set of array of natural language, the endpoint performs the task of Name Entity Recogition and returns the list of mentions found i the text.',
     params={"token": "Private token to access the APIs."}
 )

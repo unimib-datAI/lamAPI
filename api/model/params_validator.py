@@ -11,14 +11,17 @@ class ParamsValidator():
             return True, None
 
     def validate_kg(self, database, kg):
-        if kg not in database.get_supported_kgs():
+        print("kg", kg, flush=True)
+        if kg is None:
+            return True, "wikidata"
+        elif kg not in database.get_supported_kgs():
             return False, build_error("Knowledge Graph Specification Error", 400)
         else:
             return True, kg
 
     def validate_limit(self, limit):
         if limit is None:
-            return True, 100
+            return True, 1000
         try:
             limit = int(limit)
             return True, limit
