@@ -39,7 +39,7 @@ class Database:
     def create_indexes(self):
         # Specify the collections and their respective fields to be indexed
         index_specs = {
-            "cache": ["name", "lastAccessed"],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
+            "cache": ["name", "lastAccessed", "limit"],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
             "items": ["id_entity", "entity", "category", "popularity"],
             "literals": ["id_entity", "entity"],
             "objects": ["id_entity", "entity"],
