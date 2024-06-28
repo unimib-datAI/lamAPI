@@ -141,6 +141,25 @@ services:
       timeout: 10s
       retries: 120
 
+  jupyter:
+    image: roby944/jupyter-extended
+    container_name: lamapi_jupyter
+    env_file:
+      - ./.env
+    environment:
+      - JUPYTER_ENABLE_LAB= "yes"
+    command: >
+      bash -c "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''"
+    ports:
+      - "${MY_JUPYTER_PORT}:8888"
+    restart: always   
+    volumes:
+      - ./work:/home/jovyan/work
+      - ./api:/home/jovyan/work/api
+      - ${VOLUME_MY_DATA_PATH}:/home/jovyan/work/my-data
+      - ./scripts:/home/jovyan/work/scripts
+      
+
 volumes:
   esdata01:
     driver: local
