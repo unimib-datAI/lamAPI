@@ -16,7 +16,7 @@ class Database:
         self.mongo = MongoClient(MONGO_ENDPOINT, int(MONGO_PORT), username=MONGO_USERNAME, password=MONGO_PASSWORD)
         self.mappings = {kg.lower(): None for kg in SUPPORTED_KGS}
         self.update_mappings()
-        #self.create_indexes()
+        self.create_indexes()
 
     def update_mappings(self):
         history = {}
