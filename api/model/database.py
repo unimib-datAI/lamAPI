@@ -37,6 +37,7 @@ class Database:
                     self.mappings[kg_name] = db
 
     def create_indexes(self):
+        print("Creating indexes...", flush=True)
         # Specify the collections and their respective fields to be indexed
         index_specs = {
             "cache": ["name", "lastAccessed", "limit"],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
@@ -45,7 +46,7 @@ class Database:
             "objects": ["id_entity", "entity"],
             "types": ["id_entity", "entity"],
         }
-
+        print("mappings", self.mappings, flush=True)
         for db_name in self.mappings.values():
             db = self.mongo[db_name]
             for collection, fields in index_specs.items():
@@ -72,6 +73,7 @@ class Database:
                     )
                 for field in fields:
                     db[collection].create_index([(field, 1)], background=True)  # 1 for ascending order, background indexing
+        print("Indexes created.", flush=True)
 
     def get_supported_kgs(self):
         return self.mappings
