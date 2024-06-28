@@ -30,9 +30,7 @@ class Elastic:
 
     def search(self, body, kg="wikidata", limit=1000):
         try:
-            print(f"Searching {kg} with body: {body['query']}", flush=True)
             query_result = self._elastic.search(index=kg, query=body["query"], size=limit)
-            print(f"Search result: {query_result}", flush=True)
             hits = query_result["hits"]["hits"]
             max_score = query_result["hits"]["max_score"]
             

@@ -210,7 +210,6 @@ class Lookup(BaseEndpoint):
             return fuzzy_value
 
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
-        print("kg", kg, kg_is_valid, kg_error_or_value, flush=True)
         if not kg_is_valid:
             return kg_error_or_value
 
@@ -225,7 +224,7 @@ class Lookup(BaseEndpoint):
             results = lookup_retriever.search(
                 name=name,
                 limit=limit,
-                kg=kg,
+                kg=kg_error_or_value,
                 fuzzy=fuzzy_value,
                 types=types,
                 kind=kind,
@@ -235,6 +234,7 @@ class Lookup(BaseEndpoint):
                 query=query,
             )
         except Exception as e:
+            print("Error", e, flush=True)
             return build_error(str(e), 400, traceback=traceback.format_exc())
 
         return results
@@ -243,10 +243,10 @@ class Lookup(BaseEndpoint):
 @entity.route("/types")
 @api.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
-    description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns the associated TYPES for each entity.",
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns the associated TYPES for each entity.",
     params={
-        "token": "Private token to access the APIs.",
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
+        "token": "Private token to access the APIs."
     },
 )
 class Types(BaseEndpoint):
@@ -260,7 +260,6 @@ class Types(BaseEndpoint):
 
         token = args["token"]
         kg = args["kg"]
-
         token_is_valid, token_error = params_validator.validate_token(token)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
@@ -282,7 +281,7 @@ class Types(BaseEndpoint):
     description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of OBJECTS for each entity.",
     params={
         "token": "Private token to access the APIs.",
-        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
     },
 )
 class Objects(BaseEndpoint):
@@ -320,10 +319,10 @@ class Objects(BaseEndpoint):
 @entity.route("/predicates")
 @api.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
-    description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of PREDICATES between each pair of entities (SUBJECT and OBJECT).",
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns a list of PREDICATES between each pair of entities (SUBJECT and OBJECT).",
     params={
-        "token": "Private token to access the APIs.",
-        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
+        "token": "Private token to access the APIs."
     },
 )
 class Predicates(BaseEndpoint):
@@ -358,9 +357,9 @@ class Predicates(BaseEndpoint):
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description="Given a JSON array as input composed of DBpedia or Wikidata entities, the endpoint returns a list of LABELS and ALIASES for each entity. It's also possible to specify the language to filter the labels.",
     params={
-        "token": "Private token to access the APIs.",
-        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
         "lang": "Language to filter the labels.",
+        "token": "Private token to access the APIs."
     },
 )
 class Labels(BaseEndpoint):
@@ -482,8 +481,8 @@ class LiteralRecognizer(BaseEndpoint):
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description="Given a JSON array as input made of DBpedia or Wikipedia entities, the endpoint returns the list of LITERALS classified as DATETIME, NUMBER or STRING for each entity.",
     params={
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
         "token": "Private token to access the APIs.",
-        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
     },
 )
 class Literals(BaseEndpoint):

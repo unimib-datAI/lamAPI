@@ -82,7 +82,6 @@ class LookupRetriever:
             result = self._check_ids(
                 cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, final_result
             )
-            print(f"Result from check ids: {result}", flush=True)
             if result is not None:
                 final_result = result
                 self.add_or_update_cache(body, final_result)
@@ -205,7 +204,6 @@ class LookupRetriever:
                 return None
 
         query = self.create_ids_query(ids)
-        print(f"Query by ids: {query}", flush=True)
         result_by_id = self.elastic_retriever.search(query, kg, limit=1)
         result_by_id = self._get_final_candidates_list(
             result_by_id, name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
