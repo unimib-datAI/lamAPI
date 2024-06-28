@@ -109,21 +109,18 @@ class ColumnAnalysis:
                 type_details = defaultdict(list)
                 for cell in column:
                     lookup_result = self.lookup_retriever.search(cell)
-                    cell = list(lookup_result.keys())[0]
-                    lookup_result = lookup_result[cell]
-                    if lookup_result:
-                        sorted_lookup_result = sorted(
-                            lookup_result, key=lambda x: (x["ed_score"] + x["jaccard_score"]) / 2, reverse=True
-                        )[
-                            :3
-                        ]  # Top 3 results after sorting
-                        for entity in sorted_lookup_result:
-                            combined_scores.append((entity["ed_score"] + entity["jaccard_score"]) / 2)
-                            for entity_type in entity["types"]:
-                                update_dict(entity_types, entity_type["name"])
-                                type_details[entity_type["name"]].append(
-                                    {"id": entity_type["id"], "name": entity_type["name"]}
-                                )
+                    sorted_lookup_result = sorted(
+                        lookup_result, key=lambda x: (x["ed_score"] + x["jaccard_score"]) / 2, reverse=True
+                    )[
+                        :3
+                    ]  # Top 3 results after sorting
+                    for entity in sorted_lookup_result:
+                        combined_scores.append((entity["ed_score"] + entity["jaccard_score"]) / 2)
+                        for entity_type in entity["types"]:
+                            update_dict(entity_types, entity_type["name"])
+                            type_details[entity_type["name"]].append(
+                                {"id": entity_type["id"], "name": entity_type["name"]}
+                            )
 
                 if combined_scores and sum(combined_scores) / len(combined_scores) >= 0.65:
                     winning_tag = "NE"
