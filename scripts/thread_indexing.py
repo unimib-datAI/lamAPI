@@ -83,7 +83,7 @@ def index_batch(es, batch):
     except Exception as e:
         print(f"Unexpected error during indexing: {str(e)}")
 
-def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5000, num_threads=8):
+def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5000, num_threads=4):
     documents_c = mongo_client[db_name][collection_name]
 
     # Find the document with the maximum popularity value
