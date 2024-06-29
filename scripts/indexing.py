@@ -73,7 +73,7 @@ def print_usage():
     print("  <COLLECTION_NAME>  : The name of the MongoDB collection to index.")
     print("  <MAPPING_FILE>     : The path to the Elasticsearch mapping JSON file.")
 
-def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=10000):
+def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5000):
     documents_c = mongo_client[db_name][collection_name]
 
     # Find the document with the maximum popularity value
@@ -199,8 +199,16 @@ def main():
 
             with open(mapping_file, 'r') as file:
                 mapping = json.load(file)
+             # Disable refresh interval
+            index_name = re.sub(r'\d+$', '', db_name)
+            es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "-1"}})
 
+            # Perform indexing
             index_data(es, mongo_client, db_name, collection_name, mapping)
+
+            # Enable refresh interval back to default (1s)
+            es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "1s"}})
+
             print('All Finished')
 
         elif action == "status":
