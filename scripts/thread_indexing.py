@@ -158,7 +158,6 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
             }
 
             buffer.append(doc)
-            pbar.update(1)
 
             if len(buffer) >= batch_size:
                 batches.append(buffer)
@@ -169,6 +168,8 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
                         pool.map(process_batch, [(es_host, es_port, batch) for batch in batches])
                     batches = []
 
+        pbar.update(1)
+        
     if len(buffer) > 0:
         batches.append(buffer)
 
