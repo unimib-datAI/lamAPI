@@ -97,8 +97,12 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
     if es_client.indices.exists(index=index_name):
         print(f"Index {index_name} exists. Deleting it...")
         es_client.indices.delete(index=index_name)
+    
     print(f"Creating index {index_name}...")
     es_client.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
+
+    # Disable refresh interval
+    es_client.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "-1"}})
 
     total_docs = documents_c.estimated_document_count()
     results = documents_c.find({})
@@ -174,6 +178,9 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
     
     pbar.close()
 
+    # Enable refresh interval back to default (1s)
+    es_client.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "1s"}})
+
 def show_status(mongo_client, es):
     print("MongoDB Status:")
     print(mongo_client.server_info())
@@ -221,15 +228,8 @@ def main():
             with open(mapping_file, 'r') as file:
                 mapping = json.load(file)
 
-            # Disable refresh interval
-            index_name = re.sub(r'\d+$', '', db_name)
-            es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "-1"}})
-
             # Perform indexing
             index_data(ELASTIC_ENDPOINT, ELASTIC_PORT, mongo_client, db_name, collection_name, mapping)
-
-            # Enable refresh interval back to default (1s)
-            es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "1s"}})
 
             print('All Finished')
 
