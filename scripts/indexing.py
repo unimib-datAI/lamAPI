@@ -91,6 +91,7 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5
         es.indices.delete(index=index_name)
     print(f"Creating index {index_name}...")
     es.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
+    es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "-1"}})
 
     total_docs = documents_c.estimated_document_count()
     results = documents_c.find({})
@@ -152,6 +153,9 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5
                 
     if len(buffer) > 0:
         index_documents(es, buffer)
+    
+    # Enable refresh interval back to default (1s)
+    es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "1s"}})
 
 def show_status(mongo_client, es):
     print("MongoDB Status:")
@@ -199,15 +203,9 @@ def main():
 
             with open(mapping_file, 'r') as file:
                 mapping = json.load(file)
-             # Disable refresh interval
-            index_name = re.sub(r'\d+$', '', db_name)
-            es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "-1"}})
-
+            
             # Perform indexing
             index_data(es, mongo_client, db_name, collection_name, mapping)
-
-            # Enable refresh interval back to default (1s)
-            es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "1s"}})
 
             print('All Finished')
 
