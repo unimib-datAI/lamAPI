@@ -79,7 +79,7 @@ def process_batch(args):
     es_host, es_port, batch = args
     index_documents(es_host, es_port, batch)
 
-def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping, batch_size=10000, max_threads=None):
+def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping, batch_size=100000, max_threads=None):
     if max_threads is None:
         max_threads = cpu_count()
 
@@ -120,14 +120,21 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
         types = item.get("types", {}).get("P31", [])
         kind = item.get("kind", None)
         popularity = int(item.get("popularity", 0))
+        unique_labels = set()
 
         all_names = []
         for lang, name in labels.items():
+            if name.lower() in unique_labels:
+                continue
             all_names.append({"name": name, "language": lang, "is_alias": False})
+            unique_labels.add(name.lower())
 
         for lang, alias_list in aliases.items():
             for alias in alias_list:
+                if alias.lower() in unique_labels:
+                    continue
                 all_names.append({"name": alias, "language": lang, "is_alias": True})
+                unique_labels.add(alias.lower())
 
         if NERtype == "PERS":
             name = labels.get("en")
