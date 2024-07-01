@@ -108,7 +108,7 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
     batches = []
     pbar = tqdm(total=total_docs, desc="Indexing documents")
     
-    for item in results:
+    for i, item in enumerate(results):
         id_entity = item.get("entity")
         labels = item.get("labels", {})
         aliases = item.get("aliases", {})
@@ -140,7 +140,7 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
             doc = {
                 "_op_type": "index",
                 "_index": index_name,
-                "_id": id_entity,
+                "_id": i,
                 "id": id_entity,
                 "name": name,
                 "language": language,
@@ -166,8 +166,7 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
                     batches = []
 
         pbar.update(1)
-        # Enable refresh interval
-        es_client.indices.put_settings(index=index_name, settings={"index": {"refresh_interval": "1s"}})
+       
 
     if len(buffer) > 0:
         batches.append(buffer)
@@ -177,6 +176,8 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
             pool.map(process_batch, [(es_host, es_port, batch) for batch in batches])
     
     pbar.close()
+    # Enable refresh interval
+    es_client.indices.put_settings(index=index_name, settings={"index": {"refresh_interval": "1s"}})
 
 def show_status(mongo_client, es):
     print("MongoDB Status:")
