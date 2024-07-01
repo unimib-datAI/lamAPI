@@ -101,6 +101,9 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
     print(f"Creating index {index_name}...")
     es_client.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
 
+    # Disable refresh interval and replicas temporarily
+    es_client.indices.put_settings(index=index_name, settings={"index": {"refresh_interval": "-1", "number_of_replicas": 0}})
+    
     total_docs = documents_c.estimated_document_count()
     results = documents_c.find({})
     
