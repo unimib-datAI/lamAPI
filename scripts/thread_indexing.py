@@ -107,8 +107,8 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
     buffer = []
     batches = []
     pbar = tqdm(total=total_docs, desc="Indexing documents")
-    
-    for i, item in enumerate(results):
+    _id = 0
+    for item in results:
         id_entity = item.get("entity")
         labels = item.get("labels", {})
         aliases = item.get("aliases", {})
@@ -140,7 +140,7 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
             doc = {
                 "_op_type": "index",
                 "_index": index_name,
-                "_id": i,
+                "_id": _id,
                 "id": id_entity,
                 "name": name,
                 "language": language,
@@ -153,7 +153,7 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
                 "ntoken": len(name.split(' ')),
                 "popularity": round(popularity / max_popularity, 2)
             }
-
+            _id += 1
             buffer.append(doc)
 
             if len(buffer) >= batch_size:
