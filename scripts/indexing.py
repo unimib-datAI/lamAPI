@@ -125,23 +125,22 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
         for lang, name in labels.items():
             key = name.lower()
             if key not in unique_labels:
-                unique_labels[key] = []
-            unique_labels[key].append({"name": name, "language": lang, "is_alias": False})
+                unique_labels[key] = {"name": name, "languages": [], "is_alias": False}
+            unique_labels[key]["languages"].append(lang)
 
         for lang, alias_list in aliases.items():
             for alias in alias_list:
                 key = alias.lower()
                 if key not in unique_labels:
-                    unique_labels[key] = []
-                unique_labels[key].append({"name": alias, "language": lang, "is_alias": True})    
+                    unique_labels[key] = {"name": alias, "languages": [], "is_alias": True}
+                unique_labels[key]["languages"].append(lang)
 
         all_names = []
-        for _, name_entries in unique_labels.items():
-            if len(name_entries) > 1: # Same label in multiple languages we just take one and we put english as language and is_alias as False
-                name = name_entries[0]["name"]
-                all_names.append({"name": name, "language": "en", "is_alias": False})
-            else:
-                all_names.append(name_entries[0])
+        for _, value in unique_labels.items():
+            name = value["name"]
+            languages = value["languages"]
+            is_alias = value["is_alias"]
+            all_names.append({"name": name, "language": languages, "is_alias": is_alias})
 
 
         if NERtype == "PERS":
@@ -149,7 +148,7 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
             if name is not None:
                 name_abbreviations = generate_dot_notation_options(name)
                 for abbrev in name_abbreviations:
-                    all_names.append({"name": abbrev, "language": "en", "is_alias": True})
+                    all_names.append({"name": abbrev, "language": ["en"], "is_alias": True})
 
         for name_entry in all_names:
             name = name_entry["name"]
