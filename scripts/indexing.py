@@ -4,31 +4,33 @@ import json
 import sys
 import traceback
 import re
-
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk, BulkIndexError
-
 from pymongo import MongoClient
 from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
 
-def index_documents(es, buffer, max_retries=5):
+def index_documents(es_host, es_port, buffer, max_retries=5):
+    es = Elasticsearch(
+        hosts=f'http://{es_host}:{es_port}',
+        request_timeout=60,
+        max_retries=10, 
+        retry_on_timeout=True
+    )
     for attempt in range(max_retries):
         try:
             bulk(es, buffer)
             break  # Exit the loop if the bulk operation was successful
         except BulkIndexError as e:
-            # Log detailed information about the documents that failed to index
             print(f"Bulk indexing error on attempt {attempt + 1}: {e.errors}")
-            # Extract and log more detailed info for each error
             for error_detail in e.errors:
                 action, error_info = list(error_detail.items())[0]
                 print(f"Failed action: {action}")
                 print(f"Error details: {error_info}")
             time.sleep(5)
         except Exception as e:
-            # Handle other exceptions
             print(f"An unexpected error occurred during indexing on attempt {attempt + 1}: {str(e)}")
-            traceback.print_exc()  # Print the full traceback for unexpected errors
+            traceback.print_exc()
             time.sleep(5)
     else:
         print("Max retries exceeded. Failed to index some documents.")
@@ -73,10 +75,16 @@ def print_usage():
     print("  <COLLECTION_NAME>  : The name of the MongoDB collection to index.")
     print("  <MAPPING_FILE>     : The path to the Elasticsearch mapping JSON file.")
 
-def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5000):
+def process_batch(args):
+    es_host, es_port, batch = args
+    index_documents(es_host, es_port, batch)
+
+def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping, batch_size=100000, max_threads=None):
+    if max_threads is None:
+        max_threads = cpu_count() - 1
+
     documents_c = mongo_client[db_name][collection_name]
 
-    # Find the document with the maximum popularity value
     max_popularity_doc = documents_c.find_one(sort=[("popularity", -1)])
     if max_popularity_doc:
         max_popularity = max_popularity_doc["popularity"]
@@ -84,21 +92,26 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5
     else:
         raise Exception("No documents found in the collection or popularity field is missing.")
 
-    # Create the index in Elasticsearch, using db_name without trailing numbers
     index_name = re.sub(r'\d+$', '', db_name)
-    if es.indices.exists(index=index_name):
+    es_client = create_elasticsearch_client(es_host, es_port)
+    if es_client.indices.exists(index=index_name):
         print(f"Index {index_name} exists. Deleting it...")
-        es.indices.delete(index=index_name)
+        es_client.indices.delete(index=index_name)
+    
     print(f"Creating index {index_name}...")
-    es.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
-    es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "-1"}})
+    es_client.indices.create(index=index_name, settings=mapping["settings"], mappings=mapping["mappings"])
 
+    # Disable refresh interval and replicas temporarily
+    es_client.indices.put_settings(index=index_name, settings={"index": {"refresh_interval": "-1", "number_of_replicas": 0}})
+    
     total_docs = documents_c.estimated_document_count()
     results = documents_c.find({})
     
     buffer = []
-    index = 0
-    for item in tqdm(results, total=total_docs):
+    batches = []
+    pbar = tqdm(total=total_docs, desc="Indexing documents")
+    _id = 0
+    for item in results:
         id_entity = item.get("entity")
         labels = item.get("labels", {})
         aliases = item.get("aliases", {})
@@ -107,14 +120,29 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5
         types = item.get("types", {}).get("P31", [])
         kind = item.get("kind", None)
         popularity = int(item.get("popularity", 0))
+        unique_labels = {}
 
-        all_names = []
         for lang, name in labels.items():
-            all_names.append({"name": name, "language": lang, "is_alias": False})
+            key = name.lower()
+            if key not in unique_labels:
+                unique_labels[key] = []
+            unique_labels[key].append({"name": name, "language": lang, "is_alias": False})
 
         for lang, alias_list in aliases.items():
             for alias in alias_list:
-                all_names.append({"name": alias, "language": lang, "is_alias": True})
+                key = alias.lower()
+                if key not in unique_labels:
+                    unique_labels[key] = []
+                unique_labels[key].append({"name": alias, "language": lang, "is_alias": True})    
+
+        all_names = []
+        for _, name_entries in unique_labels.items():
+            if len(name_entries) > 1: # Same label in multiple languages we just take one and we put english as language and is_alias as False
+                name = name_entries[0]["name"]
+                all_names.append({"name": name, "language": "en", "is_alias": False})
+            else:
+                all_names.append(name_entries[0])
+
 
         if NERtype == "PERS":
             name = labels.get("en")
@@ -130,7 +158,7 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5
             doc = {
                 "_op_type": "index",
                 "_index": index_name,
-                "_id": index,
+                "_id": _id,
                 "id": id_entity,
                 "name": name,
                 "language": language,
@@ -143,19 +171,31 @@ def index_data(es, mongo_client, db_name, collection_name, mapping, batch_size=5
                 "ntoken": len(name.split(' ')),
                 "popularity": round(popularity / max_popularity, 2)
             }
-            
-            index += 1 
+            _id += 1
             buffer.append(doc)
 
             if len(buffer) >= batch_size:
-                index_documents(es, buffer)
+                batches.append(buffer)
                 buffer = []
-                
+
+                if len(batches) >= max_threads:
+                    with Pool(max_threads) as pool:
+                        pool.map(process_batch, [(es_host, es_port, batch) for batch in batches])
+                    batches = []
+
+        pbar.update(1)
+       
+
     if len(buffer) > 0:
-        index_documents(es, buffer)
+        batches.append(buffer)
+
+    if len(batches) > 0:
+        with Pool(max_threads) as pool:
+            pool.map(process_batch, [(es_host, es_port, batch) for batch in batches])
     
-    # Enable refresh interval back to default (1s)
-    es.indices.put_settings(index=index_name, body={"index": {"refresh_interval": "1s"}})
+    pbar.close()
+    # Enable refresh interval
+    es_client.indices.put_settings(index=index_name, settings={"index": {"refresh_interval": "1s"}})
 
 def show_status(mongo_client, es):
     print("MongoDB Status:")
@@ -203,9 +243,9 @@ def main():
 
             with open(mapping_file, 'r') as file:
                 mapping = json.load(file)
-            
+
             # Perform indexing
-            index_data(es, mongo_client, db_name, collection_name, mapping)
+            index_data(ELASTIC_ENDPOINT, ELASTIC_PORT, mongo_client, db_name, collection_name, mapping)
 
             print('All Finished')
 
