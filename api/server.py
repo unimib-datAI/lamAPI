@@ -223,7 +223,7 @@ class Lookup(BaseEndpoint):
         try:
             results = lookup_retriever.search(
                 name=name,
-                limit=limit,
+                limit=limit_error_or_value,
                 kg=kg_error_or_value,
                 fuzzy=fuzzy_value,
                 types=types,
