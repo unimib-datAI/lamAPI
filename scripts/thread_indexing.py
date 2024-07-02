@@ -81,7 +81,7 @@ def process_batch(args):
 
 def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping, batch_size=100000, max_threads=None):
     if max_threads is None:
-        max_threads = cpu_count()
+        max_threads = cpu_count() - 1
 
     documents_c = mongo_client[db_name][collection_name]
 

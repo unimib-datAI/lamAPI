@@ -176,7 +176,7 @@ class Lookup(BaseEndpoint):
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument("name", type=str, location="args")
-        parser.add_argument("limit", type=str, location="args")
+        parser.add_argument("limit", type=int, location="args")
         parser.add_argument("token", type=str, location="args")
         parser.add_argument("kind", type=str, location="args")
         parser.add_argument("NERtype", type=str, location="args")
