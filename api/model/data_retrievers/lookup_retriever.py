@@ -64,7 +64,7 @@ class LookupRetriever:
 
         body = {
             "name": cleaned_name,
-            "limit": limit,
+            "limit": {"$gte": limit},
             "kg": kg,
             "fuzzy": fuzzy,
             "types": types,
@@ -78,7 +78,7 @@ class LookupRetriever:
         )
 
         if result is not None:
-            final_result = result["candidates"]
+            final_result = result["candidates"][0:limit]
             result = self._check_ids(
                 cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, final_result
             )
