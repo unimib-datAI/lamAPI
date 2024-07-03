@@ -4,8 +4,6 @@ from datetime import datetime
 
 # Constants
 MONGO_ENDPOINT, MONGO_PORT = os.environ["MONGO_ENDPOINT"].split(":")
-MONGO_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
-MONGO_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
 SUPPORTED_KGS = os.environ["SUPPORTED_KGS"]
 SUPPORTED_KGS = SUPPORTED_KGS.split(",")
 
@@ -13,7 +11,7 @@ SUPPORTED_KGS = SUPPORTED_KGS.split(",")
 class Database:
 
     def __init__(self):
-        self.mongo = MongoClient(MONGO_ENDPOINT, int(MONGO_PORT), username=MONGO_USERNAME, password=MONGO_PASSWORD)
+        self.mongo = MongoClient(MONGO_ENDPOINT, int(MONGO_PORT))
         self.mappings = {kg.lower(): None for kg in SUPPORTED_KGS}
         self.update_mappings()
         self.create_indexes()
@@ -46,8 +44,9 @@ class Database:
             "objects": ["id_entity", "entity"],
             "types": ["id_entity", "entity"],
         }
-        print("mappings", self.mappings, flush=True)
         for db_name in self.mappings.values():
+            if db_name is None:
+                continue
             db = self.mongo[db_name]
             for collection, fields in index_specs.items():
                 if collection == "cache":
