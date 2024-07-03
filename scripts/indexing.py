@@ -131,6 +131,8 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
         for lang, alias_list in aliases.items():
             for alias in alias_list:
                 key = alias.lower()
+                if key in unique_labels and not unique_labels[key]["is_alias"]:  # Skip if the alias is already a label
+                    continue
                 if key not in unique_labels:
                     unique_labels[key] = {"name": alias, "languages": [], "is_alias": True}
                 unique_labels[key]["languages"].append(lang)
@@ -141,7 +143,6 @@ def index_data(es_host, es_port, mongo_client, db_name, collection_name, mapping
             languages = value["languages"]
             is_alias = value["is_alias"]
             all_names.append({"name": name, "language": languages, "is_alias": is_alias})
-
 
         if NERtype == "PERS":
             name = labels.get("en")
