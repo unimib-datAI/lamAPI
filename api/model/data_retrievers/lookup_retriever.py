@@ -218,7 +218,7 @@ class LookupRetriever:
         return types_id_to_name
 
     def create_token_query(self, name):
-        query = {"query": {"match": {"name": name}}}
+        query = {"query": {"match": {"name": name}}, "_source": {"excludes": ["language"]}}
         return query
 
     # Create a query to search for a list of ids (string separated by space)
