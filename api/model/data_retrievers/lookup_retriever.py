@@ -229,13 +229,19 @@ class LookupRetriever:
                 "bool": {
                     "must": [{"match": {"id": ids}}, {"match": {"language": "en"}}, {"match": {"is_alias": False}}]
                 }
+            },
+            "_source": {
+                "excludes": ["language"]
             }
         }
         return query
 
     def create_query(self, name, fuzzy=False, types=None, kind=None, NERtype=None, language=None):
         # Base query
-        query_base = {"query": {"bool": {"must": [], "filter": []}}, "sort": [{"popularity": {"order": "desc"}}]}
+        query_base = {
+            "query": {"bool": {"must": [], "filter": []}}, "sort": [{"popularity": {"order": "desc"}}],
+            "_source": {"excludes": ["language"]}
+        }
 
         # Add name to the query
         if fuzzy:

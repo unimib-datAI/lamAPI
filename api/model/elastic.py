@@ -30,7 +30,10 @@ class Elastic:
 
     def search(self, body, kg="wikidata", limit=1000):
         try:
-            query_result = self._elastic.search(index=kg, query=body["query"], size=limit)
+            query_result = self._elastic.search(index=kg, 
+                                                query=body["query"], 
+                                                _source_excludes=body["_source"]["excludes"],
+                                                size=limit)
             hits = query_result["hits"]["hits"]
             max_score = query_result["hits"]["max_score"]
             
