@@ -30,6 +30,9 @@ class Elastic:
 
     def search(self, body, kg="wikidata", limit=1000):
         try:
+            if "_source" not in body:
+                body["_source"] = {"excludes": ["language"]}
+                
             query_result = self._elastic.search(index=kg, 
                                                 query=body["query"], 
                                                 _source_excludes=body["_source"]["excludes"],
