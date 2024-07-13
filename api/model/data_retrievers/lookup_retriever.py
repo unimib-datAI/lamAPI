@@ -140,7 +140,7 @@ class LookupRetriever:
                 "name": entity["name"],
                 "description": entity.get("description", ""),
                 "types": [
-                    {"id": id_type, "name": types_id_to_name.get(id_type)} for id_type in entity["types"].split(" ")
+                    {"id": id_type, "name": types_id_to_name.get(id_type, id_type)} for id_type in entity["types"].split(" ")
                 ],
                 "kind": entity.get("kind", None),
                 "NERtype": entity.get("NERtype", None),
@@ -174,7 +174,7 @@ class LookupRetriever:
         """
         query = {
             "name": body["name"],
-            "limit": body["limit"],
+            "limit": body["limit"]["$gte"],
             "kg": body["kg"],
             "fuzzy": body["fuzzy"],
             "types": body.get("types"),
