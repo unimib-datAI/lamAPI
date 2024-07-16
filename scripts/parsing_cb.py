@@ -120,6 +120,7 @@ def process_main_data(file_path, additional_data):
         index = 0
         for chunk in pd.read_csv(file_path, chunksize=chunk_size):
             columns = chunk.columns
+            chunk['rank'].fillna(int(chunk["rank"].mean()), inplace=True)  # Filling NaNs with 0
             for _, data in chunk.iterrows():
                 parse_data(index, columns, data, additional_data)
                 index += 1
