@@ -172,3 +172,5 @@ work/HT2_ner_type.json
 work/HT2_train_df.csv
 work/R1_train_df.csv
 work/R3_train_df.csv
+work/2T_train_df.csv
+work/R4_train_df.csv
