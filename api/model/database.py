@@ -25,8 +25,10 @@ class Database:
                 continue
             kg_name = "".join(filter(str.isalpha, db))
             date = "".join(filter(str.isdigit, db))
-            if kg_name in self.mappings:  # Exclude the fake database
-                parsed_date = datetime.strptime(date, "%d%m%Y")
+            if kg_name in self.mappings:  
+                parsed_date = datetime.now()
+                if date != "":
+                    parsed_date = datetime.strptime(date, "%d%m%Y")
                 if kg_name not in history:
                     history[kg_name] = parsed_date
                     self.mappings[kg_name] = db

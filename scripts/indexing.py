@@ -61,8 +61,8 @@ def create_elasticsearch_client(endpoint, port):
         retry_on_timeout=True
     )
 
-def create_mongo_client(endpoint, port, username, password):
-    return MongoClient(endpoint, int(port), username=username, password=password)
+def create_mongo_client(endpoint, port):
+    return MongoClient(endpoint, int(port))
 
 def print_usage():
     print("Usage:")
@@ -225,11 +225,8 @@ def main():
 
     ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
     MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
-    MONGO_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
-    MONGO_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
-
     es = create_elasticsearch_client(ELASTIC_ENDPOINT, ELASTIC_PORT)
-    mongo_client = create_mongo_client(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT, MONGO_USERNAME, MONGO_PASSWORD)
+    mongo_client = create_mongo_client(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT)
 
     try:
         if action == "index":
