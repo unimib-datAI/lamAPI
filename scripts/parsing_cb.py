@@ -100,6 +100,7 @@ def read_additional_data(file_path):
 
     with tqdm(total=total_chunks, desc="Reading additional data") as pbar:
         for chunk in pd.read_csv(file_path, chunksize=chunk_size):
+            chunk['rank'].fillna(0, inplace=True)  # Filling NaNs with 0
             for _, data in chunk.iterrows():
                 entity_id = data["uuid"]
                 additional_data[entity_id] = {
@@ -120,7 +121,6 @@ def process_main_data(file_path, additional_data):
         index = 0
         for chunk in pd.read_csv(file_path, chunksize=chunk_size):
             columns = chunk.columns
-            chunk['rank'].fillna(0, inplace=True)  # Filling NaNs with 0
             for _, data in chunk.iterrows():
                 parse_data(index, columns, data, additional_data)
                 index += 1
