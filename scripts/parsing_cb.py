@@ -53,7 +53,7 @@ def parse_data(index, columns, data, additional_data):
         datatype = classify_value(value)
         if column not in literals[datatype]:
             literals[datatype][column] = []
-        literals[datatype][column].append(value)
+        literals[datatype][column].append(str(value))
 
     join = {
         "items": {
