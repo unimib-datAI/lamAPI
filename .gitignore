@@ -174,3 +174,5 @@ work/R1_train_df.csv
 work/R3_train_df.csv
 work/2T_train_df.csv
 work/R4_train_df.csv
+work/HT3_ner_type.json
+work/id_to_ner.json
