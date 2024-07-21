@@ -2,11 +2,11 @@ import os
 from model.utils import build_error
 
 ACCESS_TOKEN = os.environ["LAMAPI_TOKEN"]
-
+TEMPORARY_TOKEN = os.environ["LAMAPI_TEMPORARY_TOKEN"]
 
 class ParamsValidator:
     def validate_token(self, token):
-        if token != ACCESS_TOKEN:
+        if token != ACCESS_TOKEN or token != TEMPORARY_TOKEN:
             return False, build_error("Invalid access token", 403)
         else:
             return True, None
