@@ -1,11 +1,11 @@
 import random
 from collections import defaultdict
 import dateutil.parser
-import asyncio
+import spacy
 
 class ColumnAnalysis:
-    def __init__(self, lookup_retriever):
-        self.lookup_retriever = lookup_retriever
+    def __init__(self):
+        self.nlp = spacy.load("en_core_web_sm")
         self.LIT_DATATYPE = {
             "DATE": "DATETIME",
             "TIME": "STRING",
@@ -29,14 +29,15 @@ class ColumnAnalysis:
             return unique_values
         return random.sample(unique_values, sample_size)
 
-    async def classify_columns(self, columns=[]):
+    def classify_columns(self, columns=[]):
         def update_dict(dictionary, key, value=1):
             if key not in dictionary:
                 dictionary[key] = 0
             dictionary[key] += value
 
-        async def perform_lookup(cell):
-            return await self.lookup_retriever.search(cell)
+        def is_entity(cell):
+            doc = self.nlp(cell)
+            return any(ent.label_ for ent in doc.ents)
 
         final_result = {}
         rows = len(columns[0])
@@ -82,11 +83,13 @@ class ColumnAnalysis:
                     tag = "LIT" if label in self.LIT_DATATYPE else "NE"
                     update_dict(tags, tag)
                 else:
-                    label = self.check_literal(cell)
-                    if label != "STRING":
-                        update_dict(labels, label)
-                        tag = "LIT" if label in self.LIT_DATATYPE else "NE"
-                        update_dict(tags, tag)
+                    if is_entity(cell):
+                        label = "ENTITY"
+                    else:
+                        label = self.check_literal(cell)
+                    update_dict(labels, label)
+                    tag = "NE" if label == "ENTITY" else "LIT"
+                    update_dict(tags, tag)
 
             if is_no_ann:
                 final_result[index] = {
@@ -101,51 +104,6 @@ class ColumnAnalysis:
             # Determine preliminary classification
             winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
 
-            # If preliminary classification is STRING and not confidently identified (pure STRING), use lookup to refine
-            if (
-                winning_datatype == "STRING"
-                and not (labels.get("URL") or labels.get("EMAIL"))
-                or winning_datatype is None
-            ):
-                combined_scores = []
-                entity_types = defaultdict(int)
-                type_details = defaultdict(list)
-
-                # Use asyncio.gather for parallel lookup operations
-                lookup_results = await asyncio.gather(
-                    *[perform_lookup(cell) for cell in column], return_exceptions=True
-                )
-
-                for lookup_result in lookup_results:
-                    if isinstance(lookup_result, Exception):
-                        continue
-                    sorted_lookup_result = sorted(
-                        lookup_result, key=lambda x: (x["ed_score"] + x["jaccard_score"]) / 2, reverse=True
-                    )[:3]  # Top 3 results after sorting
-                    for entity in sorted_lookup_result:
-                        combined_scores.append((entity["ed_score"] + entity["jaccard_score"]) / 2)
-                        for entity_type in entity["types"]:
-                            update_dict(entity_types, entity_type["name"])
-                            type_details[entity_type["name"]].append(
-                                {"id": entity_type["id"], "name": entity_type["name"]}
-                            )
-
-                if combined_scores and sum(combined_scores) / len(combined_scores) >= 0.65:
-                    winning_tag = "NE"
-                    winning_type = "ENTITY"
-                    winning_datatype = "ENTITY"
-                    # Get the top 3 most frequent entity types with their scores
-                    most_frequent_types = sorted(entity_types.items(), key=lambda x: x[1], reverse=True)
-                    probable_types = [
-                        {"id": type_details[t[0]][0]["id"], "name": t[0], "frequency": t[1]}
-                        for t in most_frequent_types
-                    ]
-                else:
-                    winning_tag = "LIT"
-                    winning_type = "STRING"
-                    winning_datatype = "STRING"
-                    probable_types = None
-
             final_result[index] = {
                 "index_column": index,
                 "tag": winning_tag,
@@ -153,9 +111,6 @@ class ColumnAnalysis:
                 "datatype": winning_datatype,
                 "column_rows": column,
             }
-
-            if winning_tag == "NE":
-                final_result[index]["type_estimation"] = probable_types
 
         return final_result
 
