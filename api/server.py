@@ -1,6 +1,5 @@
 import traceback
 import logging
-import asyncio
 from flask import Flask, request
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields, reqparse
@@ -32,7 +31,7 @@ literal_classifier = LiteralClassifier()
 literals_retriever = LiteralsRetriever(database)
 sameas_retriever = SameasRetriever(database)
 lookup_retriever = LookupRetriever(database)
-column_analysis_classifier = ColumnAnalysis(lookup_retriever)
+column_analysis_classifier = ColumnAnalysis()
 ner_recognition = NERRecognizer()
 summary_retriever = SummaryRetriever(database)
 
@@ -535,9 +534,7 @@ class ColumnAnalysis(BaseEndpoint):
         else:
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(column_analysis_classifier.classify_columns(columns=data))
+                result = column_analysis_classifier.classify_columns(columns=data)
                 return result
             else:
                 build_error("Invalid Data", 400)
