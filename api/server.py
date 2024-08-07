@@ -138,9 +138,8 @@ class Info(Resource):
         info_obj = {
             "title": "LamAPI",
             "description": "This is an API which retrieves data about entities in different Knowledge Graphs and performs entity linking task.",
-            "contact": {"organization": "SINTEF, Oslo, Norway", "email": "roberto.avogadro@sintef.no"},
             "license": {"name": "Apache 2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0.html"},
-            "version": "1.0.0",
+            "version": "1.0.0"
         }
         return info_obj, 200
 
