@@ -1,7 +1,8 @@
 import random
 from collections import defaultdict
 import dateutil.parser
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+from flask import Flask, request, jsonify
 
 class ColumnAnalysis:
     def __init__(self, lookup_retriever):
@@ -29,14 +30,14 @@ class ColumnAnalysis:
             return unique_values
         return random.sample(unique_values, sample_size)
 
-    def classify_columns(self, columns=[]):
+    async def classify_columns(self, columns=[]):
         def update_dict(dictionary, key, value=1):
             if key not in dictionary:
                 dictionary[key] = 0
             dictionary[key] += value
 
-        def perform_lookup(cell):
-            return self.lookup_retriever.search(cell)
+        async def perform_lookup(cell):
+            return await self.lookup_retriever.search(cell)
 
         final_result = {}
         rows = len(columns[0])
@@ -105,28 +106,30 @@ class ColumnAnalysis:
             if (
                 winning_datatype == "STRING"
                 and not (labels.get("URL") or labels.get("EMAIL"))
-                or winning_datatype == None
+                or winning_datatype is None
             ):
                 combined_scores = []
                 entity_types = defaultdict(int)
                 type_details = defaultdict(list)
 
-                # Use ThreadPoolExecutor for parallel lookup operations
-                with ThreadPoolExecutor(max_workers=10) as executor:
-                    future_to_cell = {executor.submit(perform_lookup, cell): cell for cell in column}
-                    for future in as_completed(future_to_cell):
-                        cell = future_to_cell[future]
-                        lookup_result = future.result()
-                        sorted_lookup_result = sorted(
-                            lookup_result, key=lambda x: (x["ed_score"] + x["jaccard_score"]) / 2, reverse=True
-                        )[:3]  # Top 3 results after sorting
-                        for entity in sorted_lookup_result:
-                            combined_scores.append((entity["ed_score"] + entity["jaccard_score"]) / 2)
-                            for entity_type in entity["types"]:
-                                update_dict(entity_types, entity_type["name"])
-                                type_details[entity_type["name"]].append(
-                                    {"id": entity_type["id"], "name": entity_type["name"]}
-                                )
+                # Use asyncio.gather for parallel lookup operations
+                lookup_results = await asyncio.gather(
+                    *[perform_lookup(cell) for cell in column], return_exceptions=True
+                )
+
+                for lookup_result in lookup_results:
+                    if isinstance(lookup_result, Exception):
+                        continue
+                    sorted_lookup_result = sorted(
+                        lookup_result, key=lambda x: (x["ed_score"] + x["jaccard_score"]) / 2, reverse=True
+                    )[:3]  # Top 3 results after sorting
+                    for entity in sorted_lookup_result:
+                        combined_scores.append((entity["ed_score"] + entity["jaccard_score"]) / 2)
+                        for entity_type in entity["types"]:
+                            update_dict(entity_types, entity_type["name"])
+                            type_details[entity_type["name"]].append(
+                                {"id": entity_type["id"], "name": entity_type["name"]}
+                            )
 
                 if combined_scores and sum(combined_scores) / len(combined_scores) >= 0.65:
                     winning_tag = "NE"
