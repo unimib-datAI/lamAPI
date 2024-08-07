@@ -2,7 +2,6 @@ import random
 from collections import defaultdict
 import dateutil.parser
 import asyncio
-from flask import Flask, request, jsonify
 
 class ColumnAnalysis:
     def __init__(self, lookup_retriever):
