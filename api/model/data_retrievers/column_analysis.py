@@ -50,6 +50,7 @@ class ColumnAnalysis:
             tags = {"NE": 0, "LIT": 0}
             is_no_ann = False
             comma_count = 0
+            pattern_detected = False
 
             for cell in column:
                 label = None
@@ -76,7 +77,8 @@ class ColumnAnalysis:
                         pass
 
                 # Consistent pattern detection (e.g., "success: 200" or "error: 404")
-                if not label and all(":" in c and len(c.split(":")) == 2 for c in column):
+                if not label and (":" in cell and len(cell.split(":")) == 2):
+                    pattern_detected = True
                     label = "STATUS"
 
                 # Check for other types
@@ -105,6 +107,16 @@ class ColumnAnalysis:
 
             # Check if a significant number of rows contain commas, indicating a list-like structure
             if comma_count / len(column) > 0.5:
+                final_result[index] = {
+                    "index_column": index,
+                    "tag": "LIT",
+                    "classification": "STRING",
+                    "datatype": "STRING",
+                    "column_rows": column,
+                }
+                continue
+
+            if pattern_detected:
                 final_result[index] = {
                     "index_column": index,
                     "tag": "LIT",
