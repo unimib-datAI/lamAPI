@@ -75,8 +75,8 @@ class ColumnAnalysis:
                     except:
                         pass
 
-                # Check for consistent text patterns (e.g., "Success: 200")
-                if not label and all(c.startswith("Success:") for c in column):
+                # Consistent pattern detection (e.g., "success: 200" or "error: 404")
+                if not label and all(":" in c and len(c.split(":")) == 2 for c in column):
                     label = "STATUS"
 
                 # Check for other types
