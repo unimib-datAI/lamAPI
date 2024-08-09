@@ -119,6 +119,7 @@ class ColumnAnalysis:
                 continue
 
             if pattern_detected:
+                # If patterns like "success: 200" are detected, and they are dominant in the column, classify as LIT
                 final_result[index] = {
                     "index_column": index,
                     "tag": "LIT",
