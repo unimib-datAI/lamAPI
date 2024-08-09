@@ -49,16 +49,12 @@ class ColumnAnalysis:
             labels = defaultdict(int)
             tags = {"NE": 0, "LIT": 0}
             is_no_ann = False
-            comma_count = 0
 
             for cell in column:
                 label = None
 
                 # Normalize the cell by removing commas (for large numbers)
                 normalized_cell = cell.replace(",", "")
-
-                # Count commas to determine if the column might be a list or category
-                comma_count += cell.count(',')
 
                 # Check if the cell is a number
                 try:
@@ -98,17 +94,6 @@ class ColumnAnalysis:
                     label = "STRING"
                     update_dict(labels, label)
                     update_dict(tags, "LIT")
-
-            # Check if a significant number of rows contain commas, indicating a list-like structure
-            if comma_count / len(column) > 0.5:
-                final_result[index] = {
-                    "index_column": index,
-                    "tag": "LIT",
-                    "classification": "STRING",
-                    "datatype": "STRING",
-                    "column_rows": column,
-                }
-                continue
 
             if is_no_ann:
                 final_result[index] = {
