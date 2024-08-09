@@ -74,6 +74,10 @@ class ColumnAnalysis:
                         label = "DESC"
                     elif len(cell.split(" ")) == 1 and len(cell) <= 4:
                         label = "TOKEN"
+                    elif is_entity(cell):
+                        label = "ENTITY"
+                    else:
+                        label = self.check_literal(cell)
 
                 if label == "DESC":
                     is_no_ann = True
@@ -83,13 +87,10 @@ class ColumnAnalysis:
                     tag = "LIT" if label in self.LIT_DATATYPE else "NE"
                     update_dict(tags, tag)
                 else:
-                    if is_entity(cell):
-                        label = "ENTITY"
-                    else:
-                        label = self.check_literal(cell)
+                    # If no label was identified, default to STRING
+                    label = "STRING"
                     update_dict(labels, label)
-                    tag = "NE" if label == "ENTITY" else "LIT"
-                    update_dict(tags, tag)
+                    update_dict(tags, "LIT")
 
             if is_no_ann:
                 final_result[index] = {
@@ -115,7 +116,7 @@ class ColumnAnalysis:
         return final_result
 
     def check_literal(self, cell):
-        # Implement literal check logic here
+        # Enhanced literal check logic
         if "@" in cell and "." in cell:
             return "EMAIL"
         elif cell.startswith("http://") or cell.startswith("https://"):
@@ -126,6 +127,8 @@ class ColumnAnalysis:
                 return "FLOAT" if "." in cell else "INTEGER"
             except:
                 pass
+        elif len(cell.split(" ")) > 1:
+            return "ENTITY"
         return "STRING"
 
     def _get_winning_data_and_datatype(self, tags, labels, rows):
