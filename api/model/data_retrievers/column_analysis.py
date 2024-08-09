@@ -76,6 +76,10 @@ class ColumnAnalysis:
                     except:
                         pass
 
+                # Check if the cell is a named entity (location, postcode, country, etc.)
+                if not label and is_entity(cell):
+                    label = "ENTITY"
+
                 # Consistent pattern detection (e.g., "success: 200" or "error: 404")
                 if not label and (":" in cell and len(cell.split(":")) == 2):
                     pattern_detected = True
@@ -87,8 +91,6 @@ class ColumnAnalysis:
                         label = "DESC"
                     elif len(cell.split(" ")) == 1 and len(cell) <= 4:
                         label = "TOKEN"
-                    elif is_entity(cell):
-                        label = "ENTITY"
                     else:
                         label = self.check_literal(cell)
 
