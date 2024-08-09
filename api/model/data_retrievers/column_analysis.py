@@ -53,9 +53,12 @@ class ColumnAnalysis:
             for cell in column:
                 label = None
 
+                # Normalize the cell by removing commas (for large numbers)
+                normalized_cell = cell.replace(",", "")
+
                 # Check if the cell is a number
                 try:
-                    float(cell)
+                    float(normalized_cell)
                     label = "CARDINAL"
                 except:
                     pass
@@ -122,9 +125,10 @@ class ColumnAnalysis:
         elif cell.startswith("http://") or cell.startswith("https://"):
             return "URL"
         elif any(char.isdigit() for char in cell):
+            normalized_cell = cell.replace(",", "")
             try:
-                float(cell)
-                return "FLOAT" if "." in cell else "INTEGER"
+                float(normalized_cell)
+                return "FLOAT" if "." in normalized_cell else "INTEGER"
             except:
                 pass
         elif len(cell.split(" ")) > 1:
