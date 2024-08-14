@@ -240,8 +240,8 @@ with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
                         entry["WP_id"] = labels.get("en", {}).get("value", "")
 
                         entry["WD_id_URL"] = "http://www.wikidata.org/wiki/"+entry["WD_id"]
-                        entry["WP_id_URL"] = "http://"+lang+".wikipedia.org/wiki/"+entry["WP_id"].replace(" ","_")
-                        entry["dbpedia_URL"] = "http://dbpedia.org/resource/"+entry["WP_id"].capitalize().replace(" ","_")
+                        entry["WP_id_URL"] = "http://"+lang+".wikipedia.org/wiki/"+sitelinks['enwiki']['title'].replace(' ','_')
+                        entry["dbpedia_URL"] = "http://dbpedia.org/resource/"+sitelinks['enwiki']['title'].replace(' ','_')
                         
                         print("------------------")
                         print(entry["WD_id_URL"])
