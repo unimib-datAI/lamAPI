@@ -22,6 +22,8 @@ class ColumnAnalysis:
             "STRING": "STRING",
             "DESC": "STRING",
         }
+        # Real-world entity types
+        self.REAL_WORLD_ENTITY_TYPES = {"PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE"}
 
     def sub_sample_column(self, column, sample_size=50):
         unique_values = list(set(column))
@@ -29,15 +31,16 @@ class ColumnAnalysis:
             return unique_values
         return random.sample(unique_values, sample_size)
 
+    def is_entity(self, cell):
+        """Check if the cell contains a real-world entity using SpaCy."""
+        doc = self.nlp(cell)
+        return any(ent.label_ in self.REAL_WORLD_ENTITY_TYPES for ent in doc.ents)
+
     def classify_columns(self, columns=[]):
         def update_dict(dictionary, key, value=1):
             if key not in dictionary:
                 dictionary[key] = 0
             dictionary[key] += value
-
-        def is_entity(cell):
-            doc = self.nlp(cell)
-            return any(ent.label_ for ent in doc.ents)
 
         final_result = {}
         rows = len(columns[0])
@@ -77,12 +80,8 @@ class ColumnAnalysis:
                         pass
 
                 # Check if the cell is a named entity (location, postcode, country, etc.)
-                if not label:
-                    doc = self.nlp(cell)
-                    for ent in doc.ents:
-                        if ent.label_ in {"GPE", "LOC", "ORG"}:  # Use Spacy entity types for places and organizations
-                            label = "ENTITY"
-                            break
+                if not label and self.is_entity(cell):
+                    label = "ENTITY"
 
                 # Consistent pattern detection (e.g., "success: 200" or "error: 404")
                 if not label and (":" in cell and len(cell.split(":")) == 2):
@@ -143,7 +142,7 @@ class ColumnAnalysis:
                 }
                 continue
 
-            # Ensure NE classification if geographical locations are detected
+            # Ensure NE classification if geographical locations or other real-world entities are detected
             if "ENTITY" in labels and labels["ENTITY"] >= rows * 0.50:
                 winning_tag = "NE"
                 winning_type = "ENTITY"
