@@ -143,15 +143,14 @@ class ColumnAnalysis:
                 }
                 continue
 
-            # Determine preliminary classification
-            winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
-
-            # Check if the column likely contains postal towns or administrative areas
-            if winning_tag == "NE" and "ENTITY" in labels and labels["ENTITY"] >= rows * 0.50:
-                if "postal town" in column[0].lower() or "administrative" in column[0].lower():
-                    winning_tag = "NE"
-                    winning_type = "ENTITY"
-                    winning_datatype = "STRING"  # or a custom type if needed
+            # Ensure NE classification if geographical locations are detected
+            if "ENTITY" in labels and labels["ENTITY"] >= rows * 0.50:
+                winning_tag = "NE"
+                winning_type = "ENTITY"
+                winning_datatype = "STRING"  # or a custom type if needed
+            else:
+                # Determine preliminary classification
+                winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
 
             final_result[index] = {
                 "index_column": index,
