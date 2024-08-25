@@ -23,7 +23,10 @@ class ColumnAnalysis:
             "DESC": "STRING",
         }
         # Real-world entity types
-        self.REAL_WORLD_ENTITY_TYPES = {"PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE"}
+        self.REAL_WORLD_ENTITY_TYPES = {
+            "PERSON", "NORP", "FAC", "ORG", "GPE", "LOC",
+            "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE"
+        }
 
     def sub_sample_column(self, column, sample_size=50):
         unique_values = list(set(column))
@@ -75,8 +78,9 @@ class ColumnAnalysis:
                 update_dict(tags, tag, count)
 
             # Determine the most frequent tag and label for the column
-            winning_tag = "LIT" if tags["LIT"] >= tags["NE"] else "NE"
-            winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
+            winning_type = max(labels, key=labels.get)
+            winning_tag = "NE" if labels[winning_type] > 0 and winning_type == "ENTITY" else "LIT"
+            winning_datatype = self.LIT_DATATYPE.get(winning_type, "STRING")
 
             final_result[index] = {
                 "index_column": index,
@@ -104,20 +108,3 @@ class ColumnAnalysis:
         elif len(cell.split(" ")) > 1:
             return "ENTITY"
         return "STRING"
-
-    def _get_winning_data_and_datatype(self, tags, labels, rows):
-        winning_tag = "LIT" if tags["LIT"] >= tags["NE"] else "NE"
-        winning_type = None
-        winning_datatype = "STRING"
-
-        if winning_tag == "LIT":
-            new_labels = {label: labels.get(label, 0) for label in self.LIT_DATATYPE}
-            label_max = max(new_labels, key=new_labels.get, default=None)
-            if labels.get(label_max, 0) >= rows * 0.50:
-                winning_type = label_max
-            else:
-                winning_type = "STRING"
-
-        winning_datatype = self.LIT_DATATYPE.get(winning_type)
-
-        return winning_tag, winning_type, winning_datatype
