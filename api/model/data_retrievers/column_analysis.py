@@ -77,8 +77,12 @@ class ColumnAnalysis:
                         pass
 
                 # Check if the cell is a named entity (location, postcode, country, etc.)
-                if not label and is_entity(cell):
-                    label = "ENTITY"
+                if not label:
+                    doc = self.nlp(cell)
+                    for ent in doc.ents:
+                        if ent.label_ in {"GPE", "LOC", "ORG"}:  # Use Spacy entity types for places and organizations
+                            label = "ENTITY"
+                            break
 
                 # Consistent pattern detection (e.g., "success: 200" or "error: 404")
                 if not label and (":" in cell and len(cell.split(":")) == 2):
@@ -141,6 +145,13 @@ class ColumnAnalysis:
 
             # Determine preliminary classification
             winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
+
+            # Check if the column likely contains postal towns or administrative areas
+            if winning_tag == "NE" and "ENTITY" in labels and labels["ENTITY"] >= rows * 0.50:
+                if "postal town" in column[0].lower() or "administrative" in column[0].lower():
+                    winning_tag = "NE"
+                    winning_type = "ENTITY"
+                    winning_datatype = "STRING"  # or a custom type if needed
 
             final_result[index] = {
                 "index_column": index,
