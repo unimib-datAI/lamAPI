@@ -2,6 +2,7 @@ import random
 from collections import defaultdict
 import dateutil.parser
 import spacy
+import re
 
 class ColumnAnalysis:
     def __init__(self):
@@ -34,6 +35,23 @@ class ColumnAnalysis:
             return unique_values
         return random.sample(unique_values, sample_size)
 
+    def check_literal(self, cell):
+        # Enhanced literal check logic
+        if "@" in cell and "." in cell:
+            return "EMAIL"
+        elif cell.startswith("http://") or cell.startswith("https://"):
+            return "URL"
+        elif any(char.isdigit() for char in cell):
+            normalized_cell = cell.replace(",", "")
+            try:
+                float(normalized_cell)
+                return "FLOAT" if "." in normalized_cell else "INTEGER"
+            except:
+                pass
+        elif len(cell.split(" ")) > 1:
+            return "ENTITY"
+        return "STRING"
+
     def analyze_column_text(self, joined_text):
         """Analyze the joined text and return the frequency of each entity type."""
         doc = self.nlp(joined_text)
@@ -65,22 +83,29 @@ class ColumnAnalysis:
             labels = defaultdict(int)
             tags = {"NE": 0, "LIT": 0}
 
-            # Join the entire column into a single string separated by commas
-            joined_column = ",".join(map(str, column))
+            # First pass: check for specific patterns (e.g., URL, EMAIL)
+            for cell in column:
+                label = self.check_literal(cell)
+                if label != "STRING":  # If a specific pattern is detected, prioritize it
+                    update_dict(labels, label)
+                    update_dict(tags, "LIT")
 
-            # Analyze the joined text
-            entity_counts = self.analyze_column_text(joined_column)
-
-            # Update labels and tags based on entity counts
-            for label, count in entity_counts.items():
-                update_dict(labels, label, count)
-                tag = "NE" if label == "ENTITY" else "LIT"
-                update_dict(tags, tag, count)
+            # If no specific pattern was dominant, analyze the joined text
+            if not labels:
+                joined_column = ",".join(map(str, column))
+                entity_counts = self.analyze_column_text(joined_column)
+                for label, count in entity_counts.items():
+                    update_dict(labels, label, count)
+                    tag = "NE" if label == "ENTITY" else "LIT"
+                    update_dict(tags, tag, count)
 
             # Determine the most frequent tag and label for the column
-            winning_type = max(labels, key=labels.get)
-            winning_tag = "NE" if labels[winning_type] > 0 and winning_type == "ENTITY" else "LIT"
-            winning_datatype = self.LIT_DATATYPE.get(winning_type, "STRING")
+            if labels:
+                winning_type = max(labels, key=labels.get)
+                winning_tag = "NE" if labels[winning_type] > 0 and winning_type == "ENTITY" else "LIT"
+                winning_datatype = self.LIT_DATATYPE.get(winning_type, "STRING")
+            else:
+                winning_type, winning_tag, winning_datatype = "STRING", "LIT", "STRING"
 
             final_result[index] = {
                 "index_column": index,
@@ -91,20 +116,3 @@ class ColumnAnalysis:
             }
 
         return final_result
-
-    def check_literal(self, cell):
-        # Enhanced literal check logic
-        if "@" in cell and "." in cell:
-            return "EMAIL"
-        elif cell.startswith("http://") or cell.startswith("https://"):
-            return "URL"
-        elif any(char.isdigit() for char in cell):
-            normalized_cell = cell.replace(",", "")
-            try:
-                float(normalized_cell)
-                return "FLOAT" if "." in normalized_cell else "INTEGER"
-            except:
-                pass
-        elif len(cell.split(" ")) > 1:
-            return "ENTITY"
-        return "STRING"
