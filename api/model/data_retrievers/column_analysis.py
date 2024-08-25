@@ -57,7 +57,7 @@ class ColumnAnalysis:
 
             for cell in column:
                 label = None
-
+                cell = str(cell)
                 # Normalize the cell by removing commas (for large numbers)
                 normalized_cell = cell.replace(",", "")
 
