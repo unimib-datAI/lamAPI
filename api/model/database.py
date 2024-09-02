@@ -31,7 +31,6 @@ class Database():
         for db in self.mongo.list_database_names():
             # Handle real databases
             doc = self.mongo[db]["metadata"].find_one()
-            print(doc)
             if doc is not None and doc.get("status") == "DOING":
                 continue
             kg_name = ''.join(filter(str.isalpha, db))

@@ -102,7 +102,7 @@ try:
         raise Exception("No documents found in the collection or popularity field is missing.")
 
     es = Elasticsearch(
-                hosts=f'https://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
+                hosts=f'http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
                 request_timeout=60,
                 max_retries=10, 
                 retry_on_timeout=True,

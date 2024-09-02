@@ -7,6 +7,8 @@ from time import sleep
 # Extract environment variables
 ELASTIC_USER = os.environ["ELASTICSEARCH_USERNAME"]
 ELASTIC_PW = os.environ["ELASTIC_PASSWORD"]
+if ELASTIC_PW != "":
+    ELASTIC_PW = ""
 ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
 
 # Load index mappings
@@ -46,7 +48,7 @@ def fetch_fingerprint_with_retry(max_retry=10, delay=10):
 
 # Fetch certificate fingerprint
 print("Fetching certificate fingerprint...", flush=True)
-CERT_FINGERPRINT = fetch_fingerprint_with_retry()
+# CERT_FINGERPRINT = fetch_fingerprint_with_retry()
 
 class Elastic:
     def __init__(self, timeout=120):
@@ -55,10 +57,10 @@ class Elastic:
 
     def connect_to_elasticsearch(self):
         return Elasticsearch(
-            hosts=f'https://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
+            hosts=f'http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
             request_timeout=60,
             basic_auth=(ELASTIC_USER, ELASTIC_PW),
-            ssl_assert_fingerprint=CERT_FINGERPRINT
+            # ssl_assert_fingerprint=CERT_FINGERPRINT
         )
 
     def get_index(self, kg):
