@@ -1,13 +1,16 @@
-import os
 import json
+import os
 import subprocess
-from elasticsearch import Elasticsearch, ConnectionError
+import warnings
 from time import sleep
+
+from elasticsearch import ConnectionError, Elasticsearch
 
 # Extract environment variables
 ELASTIC_USER = os.environ["ELASTICSEARCH_USERNAME"]
-ELASTIC_PW = os.environ["ELASTIC_PASSWORD"]
+ELASTIC_PW = os.environ.get("ELASTICSEARCH_PASSWORD", "")
 if ELASTIC_PW != "":
+    warnings.warn("Using password for Elasticsearch is not recommended. Setting to empty string.")
     ELASTIC_PW = ""
 ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
 
@@ -50,6 +53,7 @@ def fetch_fingerprint_with_retry(max_retry=10, delay=10):
 print("Fetching certificate fingerprint...", flush=True)
 # CERT_FINGERPRINT = fetch_fingerprint_with_retry()
 
+
 class Elastic:
     def __init__(self, timeout=120):
         self._elastic = self.connect_to_elasticsearch()
@@ -57,7 +61,7 @@ class Elastic:
 
     def connect_to_elasticsearch(self):
         return Elasticsearch(
-            hosts=f'http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}',
+            hosts=f"http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}",
             request_timeout=60,
             basic_auth=(ELASTIC_USER, ELASTIC_PW),
             # ssl_assert_fingerprint=CERT_FINGERPRINT
@@ -68,10 +72,10 @@ class Elastic:
         indexes = indexes_mappings[kg]["indexes"]
         indexes_to_consider = [indexes[category] for category in indexes if category not in indexes_to_filter_out]
         return indexes_to_consider
-    
+
     def search(self, body, kg="wikidata", limit=100):
         self._index_name = self.get_index(kg)
-        
+
         query_result = self._elastic.search(index=self._index_name, query=body["query"], size=limit)
 
         hits = query_result["hits"]["hits"]
@@ -84,17 +88,19 @@ class Elastic:
         if kg in indexes_mappings:
 
             for i, hit in enumerate(hits):
-                new_hits.append({
-                    "id": hit["_source"]["id"],
-                    "name": hit["_source"]["name"],
-                    "description": hit["_source"]["description"],
-                    "types": hit["_source"]["types"],
-                    "popularity": hit["_source"]["popularity"],
-                    "pos_score": round((i + 1) / len(hits), 3),
-                    "es_score": round(hit["_score"] / max_score, 3),
-                    "ntoken_entity": hit["_source"]["ntoken"],
-                    "length_entity": hit["_source"]["length"]
-                })
+                new_hits.append(
+                    {
+                        "id": hit["_source"]["id"],
+                        "name": hit["_source"]["name"],
+                        "description": hit["_source"]["description"],
+                        "types": hit["_source"]["types"],
+                        "popularity": hit["_source"]["popularity"],
+                        "pos_score": round((i + 1) / len(hits), 3),
+                        "es_score": round(hit["_score"] / max_score, 3),
+                        "ntoken_entity": hit["_source"]["ntoken"],
+                        "length_entity": hit["_source"]["length"],
+                    }
+                )
                 index_sources[hit["_source"]["id"]] = hit["_index"]
 
         return new_hits, index_sources
