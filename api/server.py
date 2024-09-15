@@ -167,7 +167,8 @@ class BaseEndpoint(Resource):
         "ids": "Ids of the entity",
         "language": "Language to filter the labels. For example, <code>en</code> for English. Default is <code>None</code>.",
         "query": "Query to be used to test elastic search. Default is <code>None</code>.",
-        "token": "Private token to access the API.",
+        "cache": "Set this param to True if you want to use the cached result of the search. Default is <code>True</code>.",
+        "token": "Private token to access the API."
     },
     description="Given a string as input, the endpoint performs a search in the specified Knowledge Graph.",
 )
@@ -185,6 +186,7 @@ class Lookup(BaseEndpoint):
         parser.add_argument("ids", type=str, location="args")
         parser.add_argument("language", type=str, location="args")
         parser.add_argument("query", type=str, location="args")
+        parser.add_argument("cache", type=str, location="args")
         args = parser.parse_args()
 
         name = args["name"]
@@ -198,6 +200,7 @@ class Lookup(BaseEndpoint):
         language = args["language"]
         ids = args["ids"]
         query = args["query"]
+        cache = args["cache"]
 
         token_is_valid, token_error = params_validator.validate_token(token)
         if not token_is_valid:
@@ -231,6 +234,7 @@ class Lookup(BaseEndpoint):
                 language=language,
                 ids=ids,
                 query=query,
+                cache=cache
             )
         except Exception as e:
             print("Error", e, flush=True)
