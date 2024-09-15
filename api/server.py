@@ -200,7 +200,7 @@ class Lookup(BaseEndpoint):
         language = args["language"]
         ids = args["ids"]
         query = args["query"]
-        cache = args["cache"]
+        cache = args["cache"] if args["cache"] is not None else True
 
         token_is_valid, token_error = params_validator.validate_token(token)
         if not token_is_valid:
