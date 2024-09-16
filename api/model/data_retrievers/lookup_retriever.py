@@ -214,7 +214,7 @@ class LookupRetriever:
         ids_list = ids.split(" ")
         for item in result:
             if item["id"] in ids_list:
-                return None
+                return result
 
         query = self.create_ids_query(ids)
         result_by_id = self.elastic_retriever.search(query, kg, limit=1)
