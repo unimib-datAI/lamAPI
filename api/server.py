@@ -186,7 +186,7 @@ class Lookup(BaseEndpoint):
         parser.add_argument("ids", type=str, location="args")
         parser.add_argument("language", type=str, location="args")
         parser.add_argument("query", type=str, location="args")
-        parser.add_argument("cache", type=bool, location="args", default=True)
+        parser.add_argument("cache", type=str, location="args")
         args = parser.parse_args()
 
         name = args["name"]
@@ -200,8 +200,10 @@ class Lookup(BaseEndpoint):
         language = args["language"]
         ids = args["ids"]
         query = args["query"]
-        cache = args["cache"] 
+        cache = args["cache"]
 
+        cache = cache in ["True", "true"] 
+       
         token_is_valid, token_error = params_validator.validate_token(token)
         if not token_is_valid:
             return token_error
