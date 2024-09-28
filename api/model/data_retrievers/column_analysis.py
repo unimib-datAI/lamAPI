@@ -5,7 +5,7 @@ class ColumnAnalysis:
     def __init__(self):
        pass
 
-    def classify_columns(self, columns, model_type="fast"):
+    def classify_columns(self, columns, model_type="accurate"):
         df = pd.DataFrame(columns).transpose()
         # Initialize the classifier
         classifier = ColumnClassifier(model_type=model_type)
