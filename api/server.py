@@ -521,7 +521,10 @@ class Literals(BaseEndpoint):
 @api.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     description="Given a JSON array as input composed of a set of array of strings (cell content), the endpoint calculates, for each array, if the content represents named-entitites or literals.",
-    params={"token": "Private token to access the APIs."},
+    params={
+        "model_type": "Type of model to use. Values: 'fast' or 'accurate'. Default is 'fast'.",
+        "token": "Private token to access the APIs."
+},
 )
 class ColumnAnalysis(BaseEndpoint):
     @api.doc(body=fields_column_analysis)
@@ -529,9 +532,13 @@ class ColumnAnalysis(BaseEndpoint):
         # get parameters
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str)
+        parser.add_argument("model_type", type=str)
         args = parser.parse_args()
 
         token = args["token"]
+        model_type = args["model_type"]
+        if model_type not in ["fast", "accurate"] or model_type is None:
+            model_type = "fast"
 
         token_is_valid, token_error = params_validator.validate_token(token)
 

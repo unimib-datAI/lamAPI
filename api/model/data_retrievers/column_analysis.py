@@ -5,10 +5,10 @@ class ColumnAnalysis:
     def __init__(self):
        pass
 
-    def classify_columns(self, columns):
+    def classify_columns(self, columns, model_type="fast"):
         df = pd.DataFrame(columns).transpose()
         # Initialize the classifier
-        classifier = ColumnClassifier(model_type="fast")
+        classifier = ColumnClassifier(model_type=model_type)
 
         # Classify the DataFrame columns
         classification_results = classifier.classify_dataframe(df)
