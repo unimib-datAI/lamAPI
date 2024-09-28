@@ -2,7 +2,6 @@ import os
 from model.utils import build_error
 
 ACCESS_TOKEN = os.environ["LAMAPI_TOKEN"]
-TEMPORARY_TOKEN = os.environ["LAMAPI_TEMPORARY_TOKEN"]
 
 class ParamsValidator:
     def validate_token(self, token):

@@ -1,118 +1,56 @@
-import random
-from collections import defaultdict
-import dateutil.parser
-import spacy
-import re
+import pandas as pd
+from column_classifier.column_classifier import ColumnClassifier
 
 class ColumnAnalysis:
     def __init__(self):
-        self.nlp = spacy.load("en_core_web_sm")
-        self.LIT_DATATYPE = {
-            "DATE": "DATETIME",
-            "TIME": "STRING",
-            "PERCENT": "STRING",
-            "MONEY": "STRING",
-            "QUANTITY": "STRING",
-            "ORDINAL": "NUMBER",
-            "CARDINAL": "NUMBER",
-            "URL": "STRING",
-            "EMAIL": "STRING",
-            "INTEGER": "NUMBER",
-            "FLOAT": "NUMBER",
-            "DATETIME": "DATETIME",
-            "STRING": "STRING",
-            "DESC": "STRING",
-        }
-        # Real-world entity types
-        self.REAL_WORLD_ENTITY_TYPES = {
-            "PERSON", "NORP", "FAC", "ORG", "GPE", "LOC",
-            "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE"
-        }
+       pass
 
-    def sub_sample_column(self, column, sample_size=50):
-        unique_values = list(set(column))
-        if len(unique_values) <= sample_size:
-            return unique_values
-        return random.sample(unique_values, sample_size)
+    def classify_columns(self, columns):
+        df = pd.DataFrame(columns).transpose()
+        # Initialize the classifier
+        classifier = ColumnClassifier()
 
-    def check_literal(self, cell):
-        # Enhanced literal check logic
-        if "@" in cell and "." in cell:
-            return "EMAIL"
-        elif cell.startswith("http://") or cell.startswith("https://"):
-            return "URL"
-        elif any(char.isdigit() for char in cell):
-            normalized_cell = cell.replace(",", "")
-            try:
-                float(normalized_cell)
-                return "FLOAT" if "." in normalized_cell else "INTEGER"
-            except:
-                pass
-        elif len(cell.split(" ")) > 1:
-            return "ENTITY"
-        return "STRING"
+        # Classify the DataFrame columns
+        classification_results = classifier.classify_dataframe(df)
+        return self.generate_output_format(classification_results)
+    
 
-    def analyze_column_text(self, joined_text):
-        """Analyze the joined text and return the frequency of each entity type."""
-        doc = self.nlp(joined_text)
-        entity_counts = defaultdict(int)
+    def generate_output_format(self, input_data):
+        adapted_output = {}
 
-        for ent in doc.ents:
-            if ent.label_ in self.REAL_WORLD_ENTITY_TYPES:
-                entity_counts["ENTITY"] += 1
-            elif ent.label_ in self.LIT_DATATYPE:
-                entity_counts[ent.label_] += 1
+        # Iterate through each column in the input data
+        for col_idx, col_info in input_data.items():
+            index = int(col_idx)
+            
+            # Determine the classification and tag
+            classification = col_info['classification']
+            probabilities = col_info["probabilities"]
+
+            if classification == "NUMBER":
+                tag = "LIT"
+                classification_type = "NUMBER"
+                datatype = "NUMBER"  # For LIT, always set datatype as NUMBER
+            elif classification == "DATE":
+                tag = "LIT"
+                classification_type = "DATE"
+                datatype = "DATE"
+            elif classification == "LOCATION":
+                tag = "NE"
+                classification_type = "ENTITY"
+                # For NE, pick the datatype based on the winning probability
+                datatype = max(probabilities, key=probabilities.get)
             else:
-                entity_counts["STRING"] += 1
-
-        return entity_counts
-
-    def classify_columns(self, columns=[]):
-        def update_dict(dictionary, key, value=1):
-            if key not in dictionary:
-                dictionary[key] = 0
-            dictionary[key] += value
-
-        final_result = {}
-        rows = len(columns[0])
-
-        for index, column in enumerate(columns):
-            column = self.sub_sample_column(column)
-            final_result[index] = {}
-
-            labels = defaultdict(int)
-            tags = {"NE": 0, "LIT": 0}
-
-            # First pass: check for specific patterns (e.g., URL, EMAIL)
-            for cell in column:
-                label = self.check_literal(cell)
-                if label != "STRING":  # If a specific pattern is detected, prioritize it
-                    update_dict(labels, label)
-                    update_dict(tags, "LIT")
-
-            # If no specific pattern was dominant, analyze the joined text
-            if not labels:
-                joined_column = ",".join(map(str, column))
-                entity_counts = self.analyze_column_text(joined_column)
-                for label, count in entity_counts.items():
-                    update_dict(labels, label, count)
-                    tag = "NE" if label == "ENTITY" else "LIT"
-                    update_dict(tags, tag, count)
-
-            # Determine the most frequent tag and label for the column
-            if labels:
-                winning_type = max(labels, key=labels.get)
-                winning_tag = "NE" if labels[winning_type] > 0 and winning_type == "ENTITY" else "LIT"
-                winning_datatype = self.LIT_DATATYPE.get(winning_type, "STRING")
-            else:
-                winning_type, winning_tag, winning_datatype = "STRING", "LIT", "STRING"
-
-            final_result[index] = {
+                tag = "LIT"
+                classification_type = "STRING"  # Fallback for other cases
+                datatype = "STRING"  # Default STRING for non-NE types
+            
+            # Add the transformed data to the adapted output, including probabilities
+            adapted_output[col_idx] = {
                 "index_column": index,
-                "tag": winning_tag,
-                "classification": winning_type,
-                "datatype": winning_datatype,
-                "column_rows": column,
+                "tag": tag,
+                "classification": classification_type,
+                "datatype": datatype,
+                "probabilities": probabilities
             }
 
-        return final_result
+        return adapted_output

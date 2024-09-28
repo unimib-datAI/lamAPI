@@ -16,6 +16,7 @@ RUN pip install spacy
 
 # Download SpaCy model
 RUN python -m spacy download en_core_web_sm
+RUN python -m spacy download en_core_web_trf
 
 # Copy the rest of the application code
 COPY . .
