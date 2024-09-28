@@ -8,7 +8,7 @@ class ColumnAnalysis:
     def classify_columns(self, columns):
         df = pd.DataFrame(columns).transpose()
         # Initialize the classifier
-        classifier = ColumnClassifier()
+        classifier = ColumnClassifier(model_type="fast")
 
         # Classify the DataFrame columns
         classification_results = classifier.classify_dataframe(df)
