@@ -10,6 +10,7 @@ from model.data_retrievers.literals_retriever import LiteralsRetriever
 from model.data_retrievers.lookup_retriever import LookupRetriever
 from model.data_retrievers.ner_recognizer import NERRecognizer
 from model.data_retrievers.objects_retriever import ObjectsRetriever
+from model.data_retrievers.bow_retriever import BOWRetriever
 from model.data_retrievers.predicates_retriever import PredicatesRetriever
 from model.data_retrievers.types_retriever import TypesRetriever
 from model.data_retrievers.sameas_retriever import SameasRetriever
@@ -25,6 +26,7 @@ database = Database()
 params_validator = ParamsValidator()
 type_retriever = TypesRetriever(database)
 objects_retriever = ObjectsRetriever(database)
+bow_retriever = BOWRetriever(database)
 predicates_retriever = PredicatesRetriever(database)
 labels_retriever = LabelsRetriever(database)
 literal_classifier = LiteralClassifier()
@@ -283,7 +285,7 @@ class Types(BaseEndpoint):
 @entity.route("/objects")
 @api.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
-    description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of OBJECTS for each entity.",
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns a list of OBJECTS for each entity.",
     params={
         "token": "Private token to access the APIs.",
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
@@ -313,6 +315,47 @@ class Objects(BaseEndpoint):
             if is_data_valid:
                 try:
                     result = objects_retriever.get_objects_output(data, kg_error_or_value)
+                    return result
+                except Exception:
+                    print(traceback.format_exc())
+            else:
+                print("objects invalid", data, flush=True)
+                return build_error("Invalid Data", 400, traceback=traceback.format_exc())
+
+
+@entity.route("/bow")
+@api.doc(
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns the BAG OF WORDS (BOW) for each entity.",
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
+    },
+)
+class Objects(BaseEndpoint):
+    @entity.doc(body=fields_objects)
+    def post(self):
+        # get parameters
+        parser = reqparse.RequestParser()
+        parser.add_argument("token", type=str)
+        parser.add_argument("kg", type=str)
+        args = parser.parse_args()
+
+        token = args["token"]
+        kg = args["kg"]
+
+        token_is_valid, token_error = params_validator.validate_token(token)
+        kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
+
+        if not token_is_valid:
+            return token_error
+        elif not kg_is_valid:
+            return kg_error_or_value
+        else:
+            is_data_valid, data = super().validate_and_get_json_format()
+            if is_data_valid:
+                try:
+                    result = bow_retriever.get_bow_output(data, kg_error_or_value)
                     return result
                 except Exception:
                     print(traceback.format_exc())
@@ -360,7 +403,7 @@ class Predicates(BaseEndpoint):
 @entity.route("/labels")
 @api.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
-    description="Given a JSON array as input composed of DBpedia or Wikidata entities, the endpoint returns a list of LABELS and ALIASES for each entity. It's also possible to specify the language to filter the labels.",
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns a list of LABELS and ALIASES for each entity. It's also possible to specify the language to filter the labels.",
     params={
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
         "lang": "Language to filter the labels.",
@@ -398,7 +441,7 @@ class Labels(BaseEndpoint):
 
 @entity.route("/sameas")
 @api.doc(
-    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns the associated entities in Wikipedia and DBpedia.",
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns the associated entities in Wikipedia.",
     params={"token": "Private token to access the API."},
 )
 class SameAs(BaseEndpoint):
@@ -484,7 +527,7 @@ class LiteralRecognizer(BaseEndpoint):
 @entity.route("/literals")
 @entity.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
-    description="Given a JSON array as input made of DBpedia or Wikipedia entities, the endpoint returns the list of LITERALS classified as DATETIME, NUMBER or STRING for each entity.",
+    description="Given a JSON array as input made of Wikipedia entities, the endpoint returns the list of LITERALS classified as DATETIME, NUMBER or STRING for each entity.",
     params={
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
         "token": "Private token to access the APIs.",
@@ -626,7 +669,7 @@ class Summary(BaseEndpoint):
         # If k is not provided, use default value
         k = k if k is not None else 10
 
-        # Implement the logic to retrieve Wikidata or DBpedia summary based on parameters
+        # Implement the logic to retrieve Wikidata summary based on parameters
         if data_type == "objects":
             results = summary_retriever.get_objects_summary(kg=kg_error_or_value, rank_order=rank_order, k=k)
         elif data_type == "literals":
