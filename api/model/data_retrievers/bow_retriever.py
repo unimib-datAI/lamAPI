@@ -1,4 +1,7 @@
+import base64
+
 class BOWRetriever:
+
     def __init__(self, database):
         self.database = database
 
@@ -20,8 +23,8 @@ class BOWRetriever:
         
         for item in items_retrieved:
             entity_id = item["id"]
-            vector = item.get("bow", [])
-            entity_bow[entity_id] = vector
+            bow = item.get("bow", [])
+            entity_bow[entity_id] = base64.b64encode(bow).decode('utf-8')
 
         return entity_bow
 
