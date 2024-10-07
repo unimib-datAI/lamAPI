@@ -12,7 +12,7 @@ class BOWRetriever:
             raise ValueError(f"Knowledge graph '{kg}' is not supported.")
         
         query = {"id": {"$in": entities}}
-        return self.database.get_requested_collection("items_vectors", kg).find(query)
+        return self.database.get_requested_collection("items_vectors2", kg).find(query)
 
     def get_bow(self, entities=None, kg="wikidata"):
         if entities is None:
