@@ -5,7 +5,7 @@ class ColumnAnalysis:
     def __init__(self):
         pass
 
-    def classify_columns(self, columns, model_type="accurate"):
+    def classify_columns(self, input_tables, model_type="accurate"):
         """
         Classify a list of columns with the specified model_type.
         
@@ -17,13 +17,17 @@ class ColumnAnalysis:
         - list: A list of classified columns in the adapted output format.
         """
         # Create a DataFrame from the list of columns
-        df = pd.DataFrame(columns).transpose()
+        df_list = []
+
+        for columns in input_tables:
+            df = pd.DataFrame(columns).transpose()
+            df_list.append(df)
         
         # Initialize the ColumnClassifier
         classifier = ColumnClassifier(model_type=model_type)
         
         # Classify the DataFrame columns
-        classification_results = classifier.classify_multiple_tables([df])
+        classification_results = classifier.classify_multiple_tables(df_list)
         
         # Process and return the adapted output format
         return self.generate_output_format(classification_results)
