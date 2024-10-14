@@ -109,19 +109,17 @@ fields_column_analysis = info.model(
         "json": fields.List(
             fields.List(fields.List(fields.String)),
             example=[
+                # Table 1
                 [
-                    # Table 1
-                    [
-                        ["10", "100", "1000"],  # Column 1
-                        ["12/11/1997", "26/08/1997", "14/05/2016"],  # Column 2
-                        ["London", "New York", "Paris"]  # Column 3
-                    ],
-                    # Table 2
-                    [
-                        ["Google", "Microsoft", "Apple"],  # Column 1
-                        ["California", "Washington", "California"],  # Column 2
-                        ["1998", "1975", "1976"]  # Column 3
-                    ]
+                    ["10", "100", "1000"],  # Column 1
+                    ["12/11/1997", "26/08/1997", "14/05/2016"],  # Column 2
+                    ["London", "New York", "Paris"]  # Column 3
+                ],
+                # Table 2
+                [
+                    ["Google", "Microsoft", "Apple"],  # Column 1
+                    ["California", "Washington", "California"],  # Column 2
+                    ["1998", "1975", "1976"]  # Column 3
                 ]
             ],
         )
