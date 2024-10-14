@@ -8,5 +8,5 @@ pymongo==4.3.2
 nltk==3.6.5
 python-dateutil==2.9.0.post0
 gevent==24.2.1
-column-classifier==0.1.1
+column-classifier==0.1.2
 pandas==2.2.3
