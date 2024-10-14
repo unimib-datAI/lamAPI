@@ -50,6 +50,14 @@ class LookupRetriever:
         length_mention = len(cleaned_name)
         ambiguity_mention, corrects_tokens = self._get_ambiguity_mention(cleaned_name, kg, limit)
 
+        if query is not None:
+            query = json.loads(query)
+            result = self.elastic_retriever.search(query, kg, limit)
+            result = self._get_final_candidates_list(
+                result, cleaned_name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
+            )
+            return result
+
         if not cache:
             query = self.create_query(cleaned_name, fuzzy=fuzzy, types=types, kind=kind, NERtype=NERtype, language=language)
             result = self.elastic_retriever.search(query, kg, limit)
@@ -58,14 +66,6 @@ class LookupRetriever:
             )
             result = self._check_ids(
                 cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, result
-            )
-            return result
-
-        if query is not None:
-            query = json.loads(query)
-            result = self.elastic_retriever.search(query, kg, limit)
-            result = self._get_final_candidates_list(
-                result, cleaned_name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
             )
             return result
 
