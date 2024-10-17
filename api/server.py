@@ -231,6 +231,10 @@ class Lookup(BaseEndpoint):
         limit_is_valid, limit_error_or_value = params_validator.validate_limit(limit)
         if not limit_is_valid:
             return limit_error_or_value
+        
+        NERtype_is_valid, NERtype_error_or_value = params_validator.validate_NERtype(NERtype)
+        if not NERtype_is_valid:
+            return NERtype_error_or_value
 
         if name is None:
             return build_error("Name is required", 400)
@@ -243,7 +247,7 @@ class Lookup(BaseEndpoint):
                 fuzzy=fuzzy_value,
                 types=types,
                 kind=kind,
-                NERtype=NERtype,
+                NERtype=NERtype_error_or_value,
                 language=language,
                 ids=ids,
                 query=query,

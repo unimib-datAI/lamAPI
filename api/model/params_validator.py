@@ -47,3 +47,12 @@ class ParamsValidator:
                 return False, build_error("Bool parameter cannot be converted", 400)
         else:
             return True, False
+        
+    
+    def validate_NERtype(self, NERtype):
+        if len(NERtype) == 0:
+            return True, None
+        if NERtype not in ["LOC", "ORG", "PERS", "OTHERS"]:
+            return False, build_error("NERtype parameter is not valid", 400)
+        else:
+            return True, NERtype
