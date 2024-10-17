@@ -50,7 +50,7 @@ class ParamsValidator:
         
     
     def validate_NERtype(self, NERtype):
-        if len(NERtype) == 0 or NERtype is None:
+        if NERtype is None or len(NERtype) == 0:
             return True, None
         if NERtype not in ["LOC", "ORG", "PERS", "OTHERS"]:
             return False, build_error("NERtype parameter is not valid", 400)
