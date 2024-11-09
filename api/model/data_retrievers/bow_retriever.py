@@ -1,5 +1,6 @@
 import base64
 # Download NLTK resources if not already downloaded
+import nltk
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
 from nltk.tokenize import word_tokenize
