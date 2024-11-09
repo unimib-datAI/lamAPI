@@ -40,17 +40,20 @@ class BOWRetriever:
         return entity_bow
 
     def compute_bow_similarity(self, row_text, candidate_bows):
-        """Computes both the Jaccard similarity and matched words for the row BoW and candidate BoWs."""
+        """Computes both the row-length-dependent similarity and matched words for the row BoW and candidate BoWs."""
         row_tokens = self.tokenize_text(row_text)
+        row_token_count = len(row_tokens)
 
         result = {}
         for qid, candidate_bow_set in candidate_bows.items():
             intersection = row_tokens.intersection(candidate_bow_set)
-            union = row_tokens.union(candidate_bow_set)
-            similarity = len(intersection) / len(union) if union else 0  # Calculate Jaccard similarity
             
+            # Row-length-dependent similarity calculation
+            similarity = len(intersection) / row_token_count if row_token_count > 0 else 0  
+            
+            # Truncate similarity to 2 decimal places for clarity
             result[qid] = {
-                "similarity_score": similarity,
+                "similarity_score": round(similarity, 2),
                 "matched_words": list(intersection)
             }
 
