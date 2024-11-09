@@ -29,13 +29,13 @@ class BOWRetriever:
         if entities is None:
             entities = []
         
-        entity_bow = {}
+        entity_bow = {entity:set() for entity in entities}
         items_retrieved = self.get_bow_from_db(entities=entities, kg=kg)
         
         for item in items_retrieved:
             entity_id = item["id"]
             bow = item.get("bow", [])
-            entity_bow[entity_id] = pickle.loads(gzip.decompress(bow))  # Decompress the BoW
+            entity_bow[entity_id] = set(pickle.loads(gzip.decompress(bow)).keys())  # Decompress the BoW
         
         return entity_bow
 
@@ -47,8 +47,7 @@ class BOWRetriever:
         """
         common_words_result = {}
 
-        for entity_id, candidate_bow in candidate_bows.items():
-            candidate_bow_set = set(candidate_bow)
+        for entity_id, candidate_bow_set in candidate_bows.items():
             common_words = row_bow_set.intersection(candidate_bow_set)
             common_words_result[entity_id] = list(common_words)
         
