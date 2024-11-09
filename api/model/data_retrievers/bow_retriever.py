@@ -39,19 +39,22 @@ class BOWRetriever:
         
         return entity_bow
 
-    def compute_common_words(self, row_bow_set, candidate_bows):
-        """
-        Computes the common words between row_bow and each candidate bow.
-        row_bow: list of words representing the BoW for the row.
-        candidate_bows: dictionary with keys as entity IDs and values as lists of words for each candidate BoW.
-        """
-        common_words_result = {}
+    def compute_bow_similarity(self, row_text, candidate_bows):
+        """Computes both the Jaccard similarity and matched words for the row BoW and candidate BoWs."""
+        row_tokens = self.tokenize_text(row_text)
 
-        for entity_id, candidate_bow_set in candidate_bows.items():
-            common_words = row_bow_set.intersection(candidate_bow_set)
-            common_words_result[entity_id] = list(common_words)
-        
-        return common_words_result
+        result = {}
+        for qid, candidate_bow_set in candidate_bows.items():
+            intersection = row_tokens.intersection(candidate_bow_set)
+            union = row_tokens.union(candidate_bow_set)
+            similarity = len(intersection) / len(union) if union else 0  # Calculate Jaccard similarity
+            
+            result[qid] = {
+                "similarity_score": similarity,
+                "matched_words": list(intersection)
+            }
+
+        return result
 
     def get_bow_output(self, row_text, entities=None, kg="wikidata"):
         if entities is None:
@@ -62,9 +65,13 @@ class BOWRetriever:
         # Preprocess and create row BoW using nltk word_tokenize
         row_bow_set = self.tokenize_text(row_text)  # Tokenize with nltk
         
-        # Retrieve candidate BoWs and compute common words
+        # Retrieve candidate BoWs
         candidate_bows = self.get_bow(entities, kg=kg)
-        return self.compute_common_words(row_bow_set, candidate_bows)
+        
+        # Compute similarity scores and matched words with QID association
+        result = self.compute_bow_similarity(row_text, candidate_bows)
+        
+        return result
     
     def tokenize_text(self, text):
         """Tokenize and clean the text."""
