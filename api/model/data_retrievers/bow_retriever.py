@@ -5,6 +5,8 @@ nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+import pickle
+import gzip
 
 # Global stopwords to avoid reinitializing repeatedly
 stop_words = set(stopwords.words('english'))
@@ -34,7 +36,8 @@ class BOWRetriever:
             entity_id = item["id"]
             bow = item.get("bow", [])
             # Decode BoW (already base64 encoded) from database for each candidate
-            entity_bow[entity_id] = base64.b64decode(bow).decode('utf-8').split(',')
+            compressed_bytes = base64.b64decode(bow)
+            entity_bow[entity_id] = pickle.loads(gzip.decompress(compressed_bytes))
         
         return entity_bow
 
