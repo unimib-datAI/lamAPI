@@ -1,4 +1,5 @@
 import base64
+from nltk.tokenize import word_tokenize
 
 class BOWRetriever:
 
@@ -24,14 +25,36 @@ class BOWRetriever:
         for item in items_retrieved:
             entity_id = item["id"]
             bow = item.get("bow", [])
-            entity_bow[entity_id] = base64.b64encode(bow).decode('utf-8')
-
+            # Decode BoW (already base64 encoded) from database for each candidate
+            entity_bow[entity_id] = base64.b64decode(bow).decode('utf-8').split(',')
+        
         return entity_bow
 
-    def get_bow_output(self, entities=None, kg="wikidata"):
+    def compute_common_words(self, row_bow, candidate_bows):
+        """
+        Computes the common words between row_bow and each candidate bow.
+        row_bow: list of words representing the BoW for the row.
+        candidate_bows: dictionary with keys as entity IDs and values as lists of words for each candidate BoW.
+        """
+        common_words_result = {}
+        row_bow_set = set(row_bow)
+
+        for entity_id, candidate_bow in candidate_bows.items():
+            candidate_bow_set = set(candidate_bow)
+            common_words = row_bow_set.intersection(candidate_bow_set)
+            common_words_result[entity_id] = list(common_words)
+        
+        return common_words_result
+
+    def get_bow_output(self, row_text, entities=None, kg="wikidata"):
         if entities is None:
             entities = []
         if kg not in self.database.get_supported_kgs():
             raise ValueError(f"Knowledge graph '{kg}' is not supported.")
+
+        # Preprocess and create row BoW using nltk word_tokenize
+        row_bow = word_tokenize(row_text.lower())  # Tokenize with nltk
         
-        return self.get_bow(entities, kg=kg)
+        # Retrieve candidate BoWs and compute common words
+        candidate_bows = self.get_bow(entities, kg=kg)
+        return self.compute_common_words(row_bow, candidate_bows)

@@ -77,6 +77,12 @@ fields_predicates = info.model(
 
 fields_objects = info.model("Objects", {"json": fields.List(fields.String, example=["Q30", "Q166262"])})
 
+# Define the input model
+fields_bow = info.model("Objects", {
+    "text": fields.String(required=True, description="Text of the row to process", example="United States Washington D.C. 331000000 North America"),
+    "qids": fields.List(fields.String, required=True, description="List of candidate QIDs", example=["Q30", "Q166262"])
+})
+
 fields_sameas = info.model("SameAS", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
 
 fields_literals = info.model("Literals", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
@@ -346,7 +352,7 @@ class Objects(BaseEndpoint):
     },
 )
 class Objects(BaseEndpoint):
-    @entity.doc(body=fields_objects)
+    @entity.doc(body=fields_bow)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
@@ -368,7 +374,9 @@ class Objects(BaseEndpoint):
             is_data_valid, data = super().validate_and_get_json_format()
             if is_data_valid:
                 try:
-                    result = bow_retriever.get_bow_output(data, kg_error_or_value)
+                    row_text = data.get("text")  # Expected row text in the input JSON
+                    qids = data.get("qids", [])  # Expected QIDs list in the input JSON
+                    result = bow_retriever.get_bow_output(row_text, qids, kg=kg_error_or_value)
                     return result
                 except Exception:
                     print(traceback.format_exc())
