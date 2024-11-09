@@ -77,10 +77,12 @@ fields_predicates = info.model(
 
 fields_objects = info.model("Objects", {"json": fields.List(fields.String, example=["Q30", "Q166262"])})
 
-# Define the input model
-fields_bow = info.model("Objects", {
-    "text": fields.String(required=True, description="Text of the row to process", example="United States Washington D.C. 331000000 North America"),
-    "qids": fields.List(fields.String, required=True, description="List of candidate QIDs", example=["Q30", "Q166262"])
+# Define the input model with "json" at the root level
+fields_bow = info.model("Bow", {
+    "json": fields.Nested(info.model("JsonPayload", {
+        "text": fields.String(required=True, description="Text of the row to process", example="United States Washington D.C. 331000000 North America"),
+        "qids": fields.List(fields.String, required=True, description="List of candidate QIDs", example=["Q30", "Q166262"])
+    }))
 })
 
 fields_sameas = info.model("SameAS", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
@@ -351,7 +353,7 @@ class Objects(BaseEndpoint):
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>. Default is <code>wikidata</code>.",
     },
 )
-class Objects(BaseEndpoint):
+class Bow(BaseEndpoint):
     @entity.doc(body=fields_bow)
     def post(self):
         # get parameters
