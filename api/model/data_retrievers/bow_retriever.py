@@ -35,9 +35,7 @@ class BOWRetriever:
         for item in items_retrieved:
             entity_id = item["id"]
             bow = item.get("bow", [])
-            # Decode BoW (already base64 encoded) from database for each candidate
-            compressed_bytes = base64.b64decode(bow)
-            entity_bow[entity_id] = pickle.loads(gzip.decompress(compressed_bytes))
+            entity_bow[entity_id] = pickle.loads(gzip.decompress(bow))  # Decompress the BoW
         
         return entity_bow
 
