@@ -209,13 +209,13 @@ class LookupRetriever:
 
     def _check_ids(self, name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, result):
         if ids is None:
-            return result
+            return None
 
         result = result or []
         ids_list = ids.split(" ")
         for item in result:
             if item["id"] in ids_list:
-                return result
+                return None
 
         query = self.create_ids_query(ids)
         result_by_id = self.elastic_retriever.search(query, kg)
