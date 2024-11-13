@@ -92,12 +92,13 @@ class LookupRetriever:
 
         if result is not None:
             final_result = result["candidates"][0:limit]
+            limit = result["limit"] 
             result = self._check_ids(
                 cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, final_result
             )
             if result is not None:
                 final_result = result
-                self.add_or_update_cache(body, final_result)
+                self.add_or_update_cache(body, final_result, limit)
             return final_result
 
         query = self.create_query(cleaned_name, fuzzy=fuzzy, types=types, kind=kind, NERtype=NERtype, language=language)
@@ -112,7 +113,7 @@ class LookupRetriever:
         )
         if result is not None:
             final_result = result
-        self.add_or_update_cache(body, final_result)
+        self.add_or_update_cache(body, final_result, limit)
 
         return final_result
 
@@ -177,7 +178,7 @@ class LookupRetriever:
 
         return list(history.values())
 
-    def add_or_update_cache(self, body, final_result):
+    def add_or_update_cache(self, body, final_result, limit):
         """
         Add or update an element in the cache.
 
@@ -187,7 +188,7 @@ class LookupRetriever:
         """
         query = {
             "name": body["name"],
-            "limit": body["limit"]["$gte"],
+            "limit": limit,
             "kg": body["kg"],
             "fuzzy": body["fuzzy"],
             "types": body.get("types"),
