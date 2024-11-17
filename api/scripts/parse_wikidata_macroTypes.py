@@ -149,7 +149,7 @@ try:
     organization_subclass = list(set(organization_subclass)-set(country_subclass)-set(city_subclass)-
                              set(capitals_subclass)-set(admTerr_subclass)-set(family_subclass) -
                             set(sportLeague_subclass)-set(venue_subclass))
-    
+                
 except json.decoder.JSONDecodeError:
     pass
 
