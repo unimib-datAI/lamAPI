@@ -45,6 +45,7 @@ class Database:
             "literals": ["id_entity", "entity"],
             "objects": ["id_entity", "entity"],
             "types": ["id_entity", "entity"],
+            "bow": ["id"]
         }
         for db_name in self.mappings.values():
             if db_name is None:
@@ -71,6 +72,12 @@ class Database:
                         [("entity", 1), ("kind", 1)],
                         unique=True,
                         background=True,  # Create the index in the background
+                    )
+                elif collection == "bow":
+                    db[collection].create_index(
+                        [("text", 1), ("id", 1)],
+                        unique=True,
+                        background=True,
                     )
                 for field in fields:
                     db[collection].create_index([(field, 1)], background=True)  # 1 for ascending order, background indexing
