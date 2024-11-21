@@ -1,28 +1,38 @@
 import base64
-# Download NLTK resources if not already downloaded
 import nltk
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 import pickle
 import gzip
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+
+# Ensure NLTK resources are downloaded
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 # Global stopwords to avoid reinitializing repeatedly
 stop_words = set(stopwords.words('english'))
+
 
 class BOWRetriever:
     def __init__(self, database):
         self.database = database
         self.cache_collection_name = "bow"  # MongoDB collection for caching
-
-        # Ensure indexes are created for efficient querying
         self.ensure_cache_indexes()
 
     def ensure_cache_indexes(self):
         """Ensure indexes on the cache collection."""
         cache_collection = self.database.get_requested_collection(self.cache_collection_name)
         cache_collection.create_index([("text", 1), ("id", 1)], unique=True, background=True)
+
+    def get_bow_from_db(self, entities=None, kg="wikidata"):
+        """Retrieve BoWs directly from the database."""
+        if entities is None:
+            entities = []
+        if kg not in self.database.get_supported_kgs():
+            raise ValueError(f"Knowledge graph '{kg}' is not supported.")
+
+        query = {"id": {"$in": entities}}
+        return self.database.get_requested_collection("items_vectors2", kg).find(query)
 
     def get_bow_from_cache(self, text, entities, kg="wikidata"):
         """Retrieve cached results for the given text and entity IDs."""
@@ -33,8 +43,8 @@ class BOWRetriever:
         query = {"text": text, "id": {"$in": entities}}
         results = list(cache_collection.find(query))
 
-        # Convert results into a dictionary
-        return {item["id"]: {"similarity_score": item["similarity_score"], "matched_words": item["matched_words"]} for item in results}
+        return {item["id"]: {"similarity_score": item["similarity_score"], "matched_words": item["matched_words"]}
+                for item in results}
 
     def update_cache(self, text, results, kg="wikidata"):
         """Update the cache with new results."""
@@ -87,18 +97,8 @@ class BOWRetriever:
 
         return cached_results
 
-    def get_bow_from_db(self, entities=None, kg="wikidata"):
-        """Retrieve BoWs directly from the database."""
-        if entities is None:
-            entities = []
-        if kg not in self.database.get_supported_kgs():
-            raise ValueError(f"Knowledge graph '{kg}' is not supported.")
-        
-        query = {"id": {"$in": entities}}
-        return self.database.get_requested_collection("items_vectors2", kg).find(query)
-
     def compute_bow_similarity(self, row_text, candidate_bows):
-        """Compute similarity between the row BoW and candidate BoWs."""
+        """Compute similarity and matched words between the row BoW and candidate BoWs."""
         row_tokens = self.tokenize_text(row_text)
         row_token_count = len(row_tokens)
 
@@ -112,6 +112,18 @@ class BOWRetriever:
             }
 
         return result
+
+    def get_bow_output(self, row_text, entities=None, kg="wikidata"):
+        """Retrieve BoWs and compute similarities."""
+        if entities is None:
+            entities = []
+        if kg not in self.database.get_supported_kgs():
+            raise ValueError(f"Knowledge graph '{kg}' is not supported.")
+
+        # Retrieve or compute BoWs with caching
+        results = self.get_bow(row_text, entities, kg)
+
+        return results
 
     def tokenize_text(self, text):
         """Tokenize and clean the text."""
