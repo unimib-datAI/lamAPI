@@ -4,6 +4,7 @@ import pickle
 import gzip
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+from pymongo import UpdateOne
 
 # Ensure NLTK resources are downloaded
 nltk.download('punkt', quiet=True)
@@ -24,6 +25,16 @@ class BOWRetriever:
         cache_collection = self.database.get_requested_collection(self.cache_collection_name)
         cache_collection.create_index([("text", 1), ("id", 1)], unique=True, background=True)
 
+    def normalize_text(self, text):
+        """Normalize text by tokenizing, removing stopwords, and sorting tokens."""
+        tokens = self.tokenize_text(text)
+        return ' '.join(sorted(tokens))
+
+    def tokenize_text(self, text):
+        """Tokenize and clean the text."""
+        tokens = word_tokenize(text.lower().strip())
+        return set(t for t in tokens if t not in stop_words and t.isalnum())
+
     def get_bow_from_db(self, entities=None, kg="wikidata"):
         """Retrieve BoWs directly from the database."""
         if entities is None:
@@ -39,8 +50,9 @@ class BOWRetriever:
         if not entities:
             return {}
 
+        normalized_text = self.normalize_text(text)
         cache_collection = self.database.get_requested_collection(self.cache_collection_name, kg)
-        query = {"text": text, "id": {"$in": entities}}
+        query = {"text": normalized_text, "id": {"$in": entities}}
         results = list(cache_collection.find(query))
 
         return {item["id"]: {"similarity_score": item["similarity_score"], "matched_words": item["matched_words"]}
@@ -51,27 +63,34 @@ class BOWRetriever:
         if not results:
             return
 
+        normalized_text = self.normalize_text(text)
         cache_collection = self.database.get_requested_collection(self.cache_collection_name, kg)
-        for entity_id, result in results.items():
-            cache_document = {
-                "text": text,
-                "id": entity_id,
-                "similarity_score": result["similarity_score"],
-                "matched_words": result["matched_words"],
-            }
-            cache_collection.update_one(
-                {"text": text, "id": entity_id},  # Match by text and ID
-                {"$set": cache_document},         # Update cache data
-                upsert=True                        # Insert if not found
+
+        bulk_operations = [
+            UpdateOne(
+                {"text": normalized_text, "id": entity_id},
+                {"$set": {
+                    "similarity_score": result["similarity_score"],
+                    "matched_words": result["matched_words"],
+                }},
+                upsert=True
             )
+            for entity_id, result in results.items()
+        ]
+
+        if bulk_operations:
+            cache_collection.bulk_write(bulk_operations)
 
     def get_bow(self, text, entities, kg="wikidata"):
         """Retrieve BoWs, using the cache first and falling back to the database."""
         if not entities:
             return {}
 
+        # Normalize the text for consistent caching
+        normalized_text = self.normalize_text(text)
+
         # Step 1: Try to get results from the cache
-        cached_results = self.get_bow_from_cache(text, entities, kg)
+        cached_results = self.get_bow_from_cache(normalized_text, entities, kg)
 
         # Step 2: Identify missing entities
         cached_entity_ids = set(cached_results.keys())
@@ -87,10 +106,10 @@ class BOWRetriever:
                 candidate_bows[entity_id] = bow_data
 
             # Compute similarity for the missing entities
-            computed_results = self.compute_bow_similarity(text, candidate_bows)
+            computed_results = self.compute_bow_similarity(normalized_text, candidate_bows)
 
             # Update the cache with new results
-            self.update_cache(text, computed_results, kg)
+            self.update_cache(normalized_text, computed_results, kg)
 
             # Merge cached and computed results
             cached_results.update(computed_results)
@@ -124,8 +143,3 @@ class BOWRetriever:
         results = self.get_bow(row_text, entities, kg)
 
         return results
-
-    def tokenize_text(self, text):
-        """Tokenize and clean the text."""
-        tokens = word_tokenize(text.lower())
-        return set(t for t in tokens if t not in stop_words)
