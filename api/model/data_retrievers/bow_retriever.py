@@ -23,6 +23,8 @@ class BOWRetriever:
     def ensure_cache_indexes(self):
         """Ensure indexes on the cache collection."""
         cache_collection = self.database.get_requested_collection(self.cache_collection_name)
+        cache_collection.create_index([("text", 1)], background=True)
+        cache_collection.create_index([("id", 1)], background=True)
         cache_collection.create_index([("text", 1), ("id", 1)], unique=True, background=True)
 
     def normalize_text(self, text):
