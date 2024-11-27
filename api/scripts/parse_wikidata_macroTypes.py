@@ -8,6 +8,9 @@ from pymongo import *
 from pymongo import errors
 import configparser
 from json.decoder import JSONDecodeError
+from collections import Counter
+from SPARQLWrapper import SPARQLWrapper, JSON
+import time
 
 ############################################
 
@@ -126,32 +129,136 @@ def get_value(obj, datatype):
             value = temp["datavalue"]["value"]
     return value
 
+def retrieve_superclasses(entity_id):
+    """
+    Retrieve all superclasses of a given Wikidata entity ID.
+
+    Args:
+        entity_id (str): The ID of the entity (e.g., "Q207784").
+
+    Returns:
+        dict: A dictionary where keys are superclass IDs, and values are their labels.
+    """
+    # Define the SPARQL endpoint and query
+    endpoint_url = "https://query.wikidata.org/sparql"
+    query = f"""
+    SELECT ?superclass ?superclassLabel WHERE {{
+      wd:{entity_id} (wdt:P279)* ?superclass.
+      SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+    }}
+    """
+
+    # Function to query the SPARQL endpoint with retries
+    def query_wikidata(sparql_client, query, retries=3, delay=5):
+        for attempt in range(retries):
+            try:
+                sparql_client.setQuery(query)
+                sparql_client.setReturnFormat(JSON)
+                results = sparql_client.query().convert()
+                return results
+            except Exception as e:
+                if "429" in str(e):  # Handle Too Many Requests error
+                    print(f"Rate limit hit. Retrying in {delay} seconds... (Attempt {attempt + 1}/{retries})")
+                    time.sleep(delay)
+                else:
+                    print(f"An error occurred: {e}")
+                    break
+        return None
+
+    # Set up the SPARQL client
+    sparql = SPARQLWrapper(endpoint_url)
+
+    # Execute the query with retries
+    results = query_wikidata(sparql, query)
+
+    # Process results and return as a dictionary
+    if results:
+        superclass_dict = {}
+        for result in results["results"]["bindings"]:
+            superclass_id = result["superclass"]["value"].split("/")[-1]  # Extract entity ID from the URI
+            label = result["superclassLabel"]["value"]
+            superclass_dict[superclass_id] = label
+        return superclass_dict
+    else:
+        print("Failed to retrieve data after multiple attempts.")
+        return {}
+
+try:
+    organization_subclass = get_wikidata_item_tree_item_idsSPARQL([43229], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    organization_subclass = []
+
+try:
+    country_subclass = get_wikidata_item_tree_item_idsSPARQL([6256], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    country_subclass = []
+
+try:
+    city_subclass = get_wikidata_item_tree_item_idsSPARQL([515], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    city_subclass = []
+
+try:
+    capitals_subclass = get_wikidata_item_tree_item_idsSPARQL([5119], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    capitals_subclass = []
+
+try:
+    admTerr_subclass = get_wikidata_item_tree_item_idsSPARQL([15916867], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    admTerr_subclass = []
+
+try:
+    family_subclass = get_wikidata_item_tree_item_idsSPARQL([17350442], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    family_subclass = []
+
+try:
+    sportLeague_subclass = get_wikidata_item_tree_item_idsSPARQL([623109], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    sportLeague_subclass = []
+
+try:
+    venue_subclass = get_wikidata_item_tree_item_idsSPARQL([8436], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    venue_subclass = []
+
+# Removing overlaps for organization_subclass
+organization_subclass = list(set(organization_subclass) - set(country_subclass) - set(city_subclass) - set(capitals_subclass) - set(admTerr_subclass) - set(family_subclass) - set(sportLeague_subclass) - set(venue_subclass))
+
 try:
     geolocation_subclass = get_wikidata_item_tree_item_idsSPARQL([2221906], backward_properties=[279])
-    food_subclass =  get_wikidata_item_tree_item_idsSPARQL([2095], backward_properties=[279])
-    edInst_subclass =  get_wikidata_item_tree_item_idsSPARQL([2385804], backward_properties=[279])
-    govAgency_subclass =  get_wikidata_item_tree_item_idsSPARQL([327333], backward_properties=[279])
-    intOrg_subclass =  get_wikidata_item_tree_item_idsSPARQL([484652], backward_properties=[279])
-    timeZone_subclass =  get_wikidata_item_tree_item_idsSPARQL([12143], backward_properties=[279])    
-    geolocation_subclass = list(set(geolocation_subclass)-set(food_subclass)-set(edInst_subclass)-set(govAgency_subclass)-
-                            set(intOrg_subclass)-set(timeZone_subclass))
-    
-    organization_subclass=get_wikidata_item_tree_item_idsSPARQL([43229], backward_properties=[279])    
-    country_subclass =  get_wikidata_item_tree_item_idsSPARQL([6256], backward_properties=[279])    
-    city_subclass =  get_wikidata_item_tree_item_idsSPARQL([515], backward_properties=[279])    
-    capitals_subclass =  get_wikidata_item_tree_item_idsSPARQL([5119], backward_properties=[279])
-
-    admTerr_subclass =  get_wikidata_item_tree_item_idsSPARQL([15916867], backward_properties=[279])
-
-    family_subclass =  get_wikidata_item_tree_item_idsSPARQL([17350442], backward_properties=[279])
-    sportLeague_subclass =  get_wikidata_item_tree_item_idsSPARQL([623109], backward_properties=[279])
-    venue_subclass =  get_wikidata_item_tree_item_idsSPARQL([8436], backward_properties=[279])
-    organization_subclass = list(set(organization_subclass)-set(country_subclass)-set(city_subclass)-
-                             set(capitals_subclass)-set(admTerr_subclass)-set(family_subclass) -
-                            set(sportLeague_subclass)-set(venue_subclass))
-                
 except json.decoder.JSONDecodeError:
-    pass
+    geolocation_subclass = []
+
+try:
+    food_subclass = get_wikidata_item_tree_item_idsSPARQL([2095], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    food_subclass = []
+
+try:
+    edInst_subclass = get_wikidata_item_tree_item_idsSPARQL([2385804], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    edInst_subclass = []
+
+try:
+    govAgency_subclass = get_wikidata_item_tree_item_idsSPARQL([327333], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    govAgency_subclass = []
+
+try:
+    intOrg_subclass = get_wikidata_item_tree_item_idsSPARQL([484652], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    intOrg_subclass = []
+
+try:
+    timeZone_subclass = get_wikidata_item_tree_item_idsSPARQL([12143], backward_properties=[279])
+except json.decoder.JSONDecodeError:
+    timeZone_subclass = []
+
+# Removing overlaps for geolocation_subclass
+geolocation_subclass = list(set(geolocation_subclass) - set(food_subclass) - set(edInst_subclass) - set(govAgency_subclass) - set(intOrg_subclass) - set(timeZone_subclass))
+
 
 with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
     count = 0
@@ -195,27 +302,62 @@ with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
             
             if data.get("type") == "item" and "claims" in data:
                 p31_claims = data["claims"].get("P31", [])
+                ner_counter = Counter()
+
                 for claim in p31_claims:
                     mainsnak = claim.get("mainsnak", {})
                     datavalue = mainsnak.get("datavalue", {})
                     numeric_id = datavalue.get("value", {}).get("numeric-id")
-                    if numeric_id in organization_subclass:
-                        ORG.append(numeric_id)
 
-                    elif numeric_id == 5:
-                        PERS.append(numeric_id)
-                        
-                    elif numeric_id in geolocation_subclass:
-                        LOC.append(numeric_id)
-                        
+                    # Classify NER types
+                    if numeric_id == 5:
+                        ner_counter['PERS'] += 1
+                    elif numeric_id in geolocation_subclass or any(k.lower() in description.get('value', '').lower().split() for k in ["district", "city", "country", "capital", "state"]):
+                        ner_counter['LOC'] += 1
+                    elif numeric_id in organization_subclass:
+                        ner_counter['ORG'] += 1
                     else:
-                        OTHERS.append(numeric_id)
+                        ner_counter['OTHERS'] += 1
                         
+                # Get the most common NER type
+                if ner_counter:
+                    NERtype, _ = ner_counter.most_common(1)[0]  # Get the most common type
+
+                if NERtype == 'ORG':
+                    ORG.append(numeric_id)
+
+                elif NERtype == 'PERS':
+                    PERS.append(numeric_id)
+                    
+                elif NERtype == 'LOC':
+                    LOC.append(numeric_id)
+                    
+                else:
+                    OTHERS.append(numeric_id)
                     
                     
             ################################################################   
+            # TRANSITIVE CLOSURE
 
+            if data.get("type") == "item" and "claims" in data:
+                p31_claims = data["claims"].get("P31", [])
 
+                types_list = []
+
+                for claim in p31_claims:
+                    mainsnak = claim.get("mainsnak", {})
+                    datavalue = mainsnak.get("datavalue", {})
+                    numeric_id = datavalue.get("value", {}).get("numeric-id")
+                    types_list.append("Q"+str(numeric_id))
+
+            print(english_label)
+            for el in types_list:
+                superclasses = retrieve_superclasses(el)  # Replace with your entity ID
+                print(f"[{el}] - Number of Superclasses: {len(superclasses)}")
+
+            print("_______________________")
+
+            
             ################################################################   
             # URL EXTRACTION
 
