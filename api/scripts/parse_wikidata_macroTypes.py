@@ -11,6 +11,7 @@ from json.decoder import JSONDecodeError
 from collections import Counter
 from SPARQLWrapper import SPARQLWrapper, JSON
 import time
+from requests import get
 
 ############################################
 
