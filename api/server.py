@@ -604,7 +604,7 @@ class ColumnAnalysis(BaseEndpoint):
         token = args["token"]
         model_type = args["model_type"]
         if model_type not in ["fast", "accurate"] or model_type is None:
-            model_type = "accurate"
+            model_type = "fast"
 
         token_is_valid, token_error = params_validator.validate_token(token)
 
