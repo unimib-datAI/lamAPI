@@ -61,11 +61,11 @@ class LookupRetriever:
         if not cache:
             query = self.create_query(cleaned_name, fuzzy=fuzzy, types=types, kind=kind, NERtype=NERtype, language=language)
             result = self.elastic_retriever.search(query, kg, limit)
-            result = self._get_final_candidates_list(
+            final_result = self._get_final_candidates_list(
                 result, cleaned_name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
             )
             result = self._check_ids(
-                cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, result
+                cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, final_result
             )
             return result
 
