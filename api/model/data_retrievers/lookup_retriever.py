@@ -64,10 +64,10 @@ class LookupRetriever:
             final_result = self._get_final_candidates_list(
                 result, cleaned_name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
             )
-            result = self._check_ids(
+            final_result = self._check_ids(
                 cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, final_result
             )
-            return result
+            return final_result
 
         # Sort types to avoid types duplication in cache due to possible permutations (e.g. "A B" and "B A" are the same type)
         if types is not None:
@@ -108,11 +108,9 @@ class LookupRetriever:
         final_result = self._get_final_candidates_list(
             result, cleaned_name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
         )
-        result = self._check_ids(
+        final_result = self._check_ids(
             cleaned_name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, final_result
         )
-        if result is not None:
-            final_result = result
         self.add_or_update_cache(body, final_result, limit)
 
         return final_result
@@ -213,7 +211,7 @@ class LookupRetriever:
 
         result = result or []
         ids_list = ids.split(" ")
-        
+       
         for item in result:
             if item["id"] in ids_list:
                 ids_list.remove(item["id"])
