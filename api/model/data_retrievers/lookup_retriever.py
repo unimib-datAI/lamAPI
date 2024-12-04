@@ -213,10 +213,15 @@ class LookupRetriever:
 
         result = result or []
         ids_list = ids.split(" ")
+        
         for item in result:
             if item["id"] in ids_list:
-                return None
+                ids_list.remove(item["id"])
 
+        if len(ids_list) == 0:
+            return result
+
+        ids = " ".join(ids_list)        
         query = self.create_ids_query(ids)
         result_by_id = self.elastic_retriever.search(query, kg)
         result_by_id = self._get_final_candidates_list(
