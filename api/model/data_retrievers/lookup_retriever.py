@@ -209,7 +209,7 @@ class LookupRetriever:
 
     def _check_ids(self, name, kg, ids, ntoken_mention, length_mention, ambiguity_mention, corrects_tokens, result):
         if ids is None:
-            return None
+            return result
 
         result = result or []
         ids_list = ids.split(" ")
