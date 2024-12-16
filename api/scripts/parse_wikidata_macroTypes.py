@@ -313,7 +313,7 @@ with bz2.open(wikidata_dump_path, 'rt', encoding='utf-8') as f:
                     # Classify NER types
                     if numeric_id == 5:
                         ner_counter['PERS'] += 1
-                    elif numeric_id in geolocation_subclass or any(k.lower() in description.get('value', '').lower().split() for k in ["district", "city", "country", "capital", "state"]):
+                    elif numeric_id in geolocation_subclass:
                         ner_counter['LOC'] += 1
                     elif numeric_id in organization_subclass:
                         ner_counter['ORG'] += 1
