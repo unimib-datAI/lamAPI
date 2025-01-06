@@ -102,7 +102,7 @@ def read_additional_data(file_path):
         for chunk in pd.read_csv(file_path, chunksize=chunk_size):
             chunk['rank'].fillna(0, inplace=True)  # Filling NaNs with 0
             for _, data in chunk.iterrows():
-                entity_id = data["uuid"]
+                entity_id = data["permalink"]
                 additional_data[entity_id] = {
                     "url": data["cb_url"],
                     "description": data["description"],
