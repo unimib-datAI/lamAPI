@@ -39,7 +39,7 @@ def classify_value(value):
 def parse_data(index, columns, data, additional_data):
     literals = {datatype: {} for datatype in ["STRING", "DATETIME", "NUMBER"]}
     types = {"P31": ["Organization"]}
-    entity = data["uuid"]
+    entity = data["permalink"]
     description = str(additional_data.get(entity, {}).get("description", ""))
     if description.lower() == "nan":
         description = ""
@@ -47,7 +47,7 @@ def parse_data(index, columns, data, additional_data):
     all_labels = {"en": str(data["name"])}
     all_aliases = {"en": [str(data.get(f"alias{i}")) for i in range(1, 4) if data.get(f"alias{i}") and str(data.get(f"alias{i}")) != "nan"]}
 
-    new_columns = set(columns) - {"uuid", "name", "alias1", "alias2", "alias3"}
+    new_columns = set(columns) - {"permalink", "name", "alias1", "alias2", "alias3"}
     for column in new_columns:
         value = data[column]
         datatype = classify_value(value)
