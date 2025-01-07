@@ -46,7 +46,7 @@ def parse_data(index, columns, data, additional_data):
     popularity = additional_data.get(entity, {}).get("popularity", 0)
     all_labels = {"en": str(data["name"])}
     all_aliases = {"en": [str(data.get(f"alias{i}")) for i in range(1, 4) if data.get(f"alias{i}") and str(data.get(f"alias{i}")) != "nan"]}
-
+    # aliases have been removed from the main data because they are not useful for the task (too noisy and they might lead to false positives)
     new_columns = set(columns) - {"permalink", "name", "alias1", "alias2", "alias3"}
     for column in new_columns:
         value = data[column]
@@ -61,7 +61,7 @@ def parse_data(index, columns, data, additional_data):
             "entity": entity,
             "description": {"language": "en", "value": description},
             "labels": all_labels,
-            "aliases": all_aliases,
+            "aliases": {"en": []},
             "types": types,
             "popularity": popularity,
             "kind": "entity",
@@ -122,8 +122,9 @@ def process_main_data(file_path, additional_data):
         for chunk in pd.read_csv(file_path, chunksize=chunk_size):
             columns = chunk.columns
             for _, data in chunk.iterrows():
-                parse_data(index, columns, data, additional_data)
-                index += 1
+                if str(data["permalink"]) != "nan":
+                    parse_data(index, columns, data, additional_data)
+                    index += 1
             pbar.update(1)
 
     flush_buffer(buffer)
