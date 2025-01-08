@@ -340,9 +340,12 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             type_numeric_id = datavalue.get("value", {}).get("numeric-id")
             types_list.append(type_numeric_id)
 
-    extended_WDtypes = {}
+    extended_WDtypes = []
+    total = []
     for el in types_list:
-        extended_WDtypes[el] = retrieve_superclasses(el)  # Replace with your entity ID
+        total += retrieve_superclasses(el)
+    extended_WDtypes = set(total)
+    
     ################################################################   
     # URL EXTRACTION
 
