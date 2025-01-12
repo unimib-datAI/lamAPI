@@ -356,10 +356,10 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
         tmp["WP_id"] = labels.get("en", {}).get("value", "")
 
         url_dict={}
-        url_dict["wikidata"] = "http://www.wikidata.org/wiki/"+url_dict["WD_id"]
-        url_dict["wikipedia"] = "http://"+lang+".wikipedia.org/wiki/"+url_dict["WP_id"].replace(" ","_")
-        url_dict["dbpedia"] = "http://dbpedia.org/resource/"+url_dict["WP_id"].capitalize().replace(" ","_")
-        
+        url_dict["wikidata"] = "http://www.wikidata.org/wiki/"+tmp["WD_id"]
+        url_dict["wikipedia"] = "http://"+lang+".wikipedia.org/wiki/"+sitelinks['enwiki']['title'].replace(' ','_')
+        url_dict["dbpedia"] = "http://dbpedia.org/resource/"+sitelinks['enwiki']['title'].replace(' ','_')
+                    
 
     except json.decoder.JSONDecodeError:
        pass
@@ -385,7 +385,8 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             # new updates
             "NERtype": NERtype, # (list of ORG, LOC, PER or OTHERS)
             "URLs" : url_dict,
-            "extended_WDtypes" : extended_WDtypes
+            "extended_WDtypes" : extended_WDtypes,  # list of extended types
+            "explicit_WDtypes" : types_list    # list of extended types
             ######################
         },
         "objects": { 
