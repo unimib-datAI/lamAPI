@@ -240,7 +240,7 @@ def retrieve_superclasses(entity_id):
         for result in results["results"]["bindings"]:
             superclass_id = result["superclass"]["value"].split("/")[-1]  # Extract entity ID from the URI
             label = result["superclassLabel"]["value"]
-            superclass_dict[label] = int(superclass_id[1:])
+            superclass_dict[label] =  "Q"+(superclass_id[1:])
         return list(superclass_dict.values())
     else:
         print("Failed to retrieve data after multiple attempts.")
@@ -338,7 +338,7 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             mainsnak = claim.get("mainsnak", {})
             datavalue = mainsnak.get("datavalue", {})
             type_numeric_id = datavalue.get("value", {}).get("numeric-id")
-            types_list.append(type_numeric_id)
+            types_list.append("Q"+str(type_numeric_id))
 
     extended_WDtypes = []
     total = []
