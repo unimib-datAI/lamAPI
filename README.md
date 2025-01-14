@@ -69,6 +69,7 @@ This algorithm describes the process of extending entity types by retrieving the
    - **`organization_subclass`**
    - **`geolocation_subclass`**
    - **`person`**
+   
 Their creation is done as specified in the paper **"NECKAr"**: for each macro class the list with their subclasses and their types "instance of" are included. In the following example the complete list of types "instance of" **capital city** are included into the **`geolocation_subclass`** list:
 ![subtype hierarchy](./pictures/ner_hierarchy.png)
 
