@@ -6,13 +6,14 @@ services:
         PYTHON_VERSION: ${PYTHON_VERSION}
     container_name: lamapi_api
     env_file:
-     - ./.env
+      - ./.env
     command: bash -c "gunicorn -w $THREADS -k gevent -b 0.0.0.0:5000 server:app --timeout 300 --reload --log-level debug"
     ports:
       - "${LAMAPI_PORT}:5000"
     restart: always
     volumes:
       - ./api/:/app
+      - ./scripts/:/scripts
   
   mongo:
     image: mongo:${MONGO_VERSION}
@@ -28,7 +29,7 @@ services:
       
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
-    container_name: lamapi_es01
+    container_name: lamapi_elastic
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
       - /home/lamapi/data/esdata01:/usr/share/elasticsearch/data

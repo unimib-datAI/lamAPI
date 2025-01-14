@@ -1,171 +1,87 @@
-import re
-
-import spacy
-from model.literal_recognizer import LiteralRecognizer
-
-nlp = spacy.load("en_core_web_sm")
+import pandas as pd
+from column_classifier.column_classifier import ColumnClassifier
 
 
 class ColumnAnalysis:
-
     def __init__(self):
-        self.literal_recognizer = LiteralRecognizer()
+        pass
 
-        self.entity_type_dict = {
-            "PERSON": "NE",
-            "NORP": "NE",
-            "FAC": "NE",
-            "ORG": "NE",
-            "GPE": "NE",
-            "LOC": "NE",
-            "PRODUCT": "NE",
-            "EVENT": "NE",
-            "WORK_OF_ART": "NE",
-            "LAW": "NE",
-            "LANGUAGE": "NE",
-            "DATE": "LIT",
-            "TIME": "LIT",
-            "PERCENT": "LIT",
-            "MONEY": "LIT",
-            "QUANTITY": "LIT",
-            "ORDINAL": "LIT",
-            "CARDINAL": "LIT",
-            "URL": "LIT",
-            "DESC": "LIT",
-            "TOKEN": "LIT",
-            "INTEGER": "LIT",
-            "FLOAT": "LIT",
-            "DATETIME": "LIT",
-            "EMAIL": "LIT",
-        }
+    def classify_columns(self, input_tables, model_type="accurate"):
+        """
+        Classify a list of columns with the specified model_type.
 
-        self.LIT_DATATYPE = {
-            "DATE": "DATETIME",
-            "TIME": "STRING",
-            "PERCENT": "STRING",
-            "MONEY": "STRING",
-            "QUANTITY": "STRING",
-            "ORDINAL": "NUMBER",
-            "CARDINAL": "NUMBER",
-            "URL": "STRING",
-            "DESC": "STRING",
-            "TOKEN": "STRING",
-            "INTEGER": "NUMBER",
-            "FLOAT": "NUMBER",
-            "DATETIME": "DATETIME",
-            "EMAIL": "STRING",
-            "STRING": "STRING",
-        }
+        Parameters:
+        - columns (list): List of columns data to be classified.
+        - model_type (str): The model type to use for classification ('accurate' or 'fast').
 
-        self.NE_DATATYPE = [
-            "PERSON",
-            "NORP",
-            "FAC",
-            "ORG",
-            "GPE",
-            "LOC",
-            "PRODUCT",
-            "EVENT",
-            "WORK_OF_ART",
-            "LAW",
-            "LANGUAGE",
-        ]
+        Returns:
+        - list: A list of classified columns in the adapted output format.
+        """
+        # Create a DataFrame from the list of columns
+        df_list = []
 
-    def classifiy_columns(self, columns=[]):
+        for columns in input_tables:
+            df = pd.DataFrame(columns).transpose()
+            df_list.append(df)
 
-        def update_dict(dictionary, key, value=1):
-            if key not in dictionary:
-                dictionary[key] = 0
-            dictionary[key] += value
+        # Initialize the ColumnClassifier
+        classifier = ColumnClassifier(model_type=model_type)
 
-        final_result = {}
-        rows = len(columns[0])
-        for index, column in enumerate(columns):
-            final_result[index] = {}
+        # Classify the DataFrame columns
+        classification_results = classifier.classify_multiple_tables(df_list)
 
-            # Analyze the concatenated text using Spacy
-            labels = {}
-            tags = {"NE": 0, "LIT": 0}
+        # Process and return the adapted output format
+        return self.generate_output_format(classification_results)
 
-            for cell in column:
-                is_number = False
-                label = None
-                try:
-                    float(cell)
-                    is_number = True
-                except:
-                    pass
+    def generate_output_format(self, classification_results):
+        """
+        Transform the classification results into the desired output format.
 
-                if is_number:
-                    label = "CARDINAL"
-                elif len(cell.split(" ")) >= 7:
-                    label = "DESC"
-                elif len(cell.split(" ")) == 1 and len(cell) <= 4:
-                    label = "TOKEN"
+        Parameters:
+        - classification_results (list): List of dictionaries containing the classification results.
 
-                if label is not None:
-                    update_dict(labels, label)
-                    tag = self.entity_type_dict[label]
-                    update_dict(tags, tag)
-                else:
-                    label = self.literal_recognizer.check_literal(cell)
-                    if label != "STRING":
-                        update_dict(labels, label)
-                        tag = self.entity_type_dict[label]
-                        update_dict(tags, tag)
+        Returns:
+        - list: A list of adapted output dictionaries with index_column, tag, classification, datatype, and probabilities.
+        """
+        adapted_output = []
 
-            text_to_analyze = " ; ".join(column)
-            doc = nlp(text_to_analyze)
-            for ent in doc.ents:
-                label = ent.label_
-                if label in ["CARDINAL", "ORDINAL"]:
-                    continue
-                update_dict(labels, label)
-                tag = self.entity_type_dict[label]
-                update_dict(tags, tag)
+        # Iterate through each table in the classification results
+        for table_result in classification_results:
+            for table_name, columns_info in table_result.items():
+                table_output = {}
 
-            winning_tag, winning_type, winning_datatype = self._get_winning_data_and_datatype(tags, labels, rows)
+                # Iterate through each column's classification result
+                for col_name, col_info in columns_info.items():
+                    classification = col_info["classification"]
+                    probabilities = col_info["probabilities"]
 
-            final_result[index] = {
-                "index_column": index,
-                "tag": winning_tag,
-                "classification": winning_type,
-                "datatype": winning_datatype,
-                "column_rows": column,
-            }
-        return final_result
+                    NE_types = ["PERSON", "ORGANIZATION", "LOCATION", "OTHER"]
+                    lit_types = ["NUMBER", "DATE", "STRING"]
 
-    def _get_winning_data_and_datatype(self, tags, labels, rows):
-        winning_tag = "NE"
-        winning_type = None
-        winning_datatype = None
-        if tags["LIT"] + tags["NE"] == 0:
-            winning_tag = "LIT"
-            winning_datatype = "STRING"
-        elif tags["NE"] > rows * 2:
-            winning_tag = "LIT"
-            winning_datatype = "STRING"
-        elif tags["LIT"] >= tags["NE"]:
-            winning_tag = "LIT"
-        elif tags["NE"] <= rows * 0.40:
-            winning_tag = "LIT"
+                    # Determine the tag, classification type, and datatype based on the classification
+                    if classification in lit_types:
+                        tag = "LIT"
+                        classification_type = classification
+                        datatype = classification
+                    elif classification in NE_types:
+                        tag = "NE"
+                        classification_type = classification
+                        datatype = classification
+                    else:
+                        tag = "UNKNOWN"
+                        classification_type = "UNKNOWN"
+                        datatype = "UNKNOWN"
 
-        if labels.get("DATE") == labels.get("CARDINAL"):
-            if "CARDINAL" in labels:
-                labels["CARDINAL"] += 1
+                    # Add the transformed data for the column to the table output
+                    table_output[col_name] = {
+                        "index_column": col_name,
+                        "tag": tag,
+                        "classification": classification_type,
+                        "datatype": datatype,
+                        "probabilities": probabilities,
+                    }
 
-        if winning_tag == "LIT":
-            new_labels = {label: labels.get(label, 0) for label in self.LIT_DATATYPE}
-            label_max = max(new_labels, key=new_labels.get, default=None)
-            if labels.get(label_max, 0) >= rows * 0.50 and winning_datatype is None:
-                winning_type = label_max
-            else:
-                winning_type = "STRING"
-        else:
-            new_labels = {label: labels.get(label, 0) for label in self.NE_DATATYPE}
-            label_max = max(new_labels, key=new_labels.get, default=None)
-            winning_type = label_max
+                # Append the table output to the final adapted output list
+                adapted_output.append({table_name: table_output})
 
-        winning_datatype = self.LIT_DATATYPE.get(winning_type)
-
-        return winning_tag, winning_type, winning_datatype
+        return adapted_output
