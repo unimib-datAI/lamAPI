@@ -1,6 +1,6 @@
 import os
+
 from pymongo import MongoClient
-from datetime import datetime
 
 # Constants
 MONGO_ENDPOINT, MONGO_PORT = os.environ["MONGO_ENDPOINT"].split(":")
@@ -25,7 +25,7 @@ class Database:
                 continue
             kg_name = "".join(filter(str.isalpha, db))
             date = "".join(filter(str.isdigit, db))
-            if kg_name in self.mappings:  
+            if kg_name in self.mappings:
                 parsed_date = datetime.now()
                 if date != "":
                     parsed_date = datetime.strptime(date, "%d%m%Y")
@@ -40,12 +40,16 @@ class Database:
         print("Creating indexes...", flush=True)
         # Specify the collections and their respective fields to be indexed
         index_specs = {
-            "cache": ["name", "lastAccessed", "limit"],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
+            "cache": [
+                "name",
+                "lastAccessed",
+                "limit",
+            ],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
             "items": ["id_entity", "entity", "category", "popularity"],
             "literals": ["id_entity", "entity"],
             "objects": ["id_entity", "entity"],
             "types": ["id_entity", "entity"],
-            "bow": ["id"]
+            "bow": ["id"],
         }
         for db_name in self.mappings.values():
             if db_name is None:
@@ -80,14 +84,19 @@ class Database:
                         background=True,
                     )
                 for field in fields:
-                    db[collection].create_index([(field, 1)], background=True)  # 1 for ascending order, background indexing
+                    db[collection].create_index(
+                        [(field, 1)], background=True
+                    )  # 1 for ascending order, background indexing
         print("Indexes created.", flush=True)
 
     def get_supported_kgs(self):
         return self.mappings
 
     def get_url_kgs(self):  # hard-coded for now
-        return {"wikidata": "https://www.wikidata.org/wiki/", "crunchbase": "https://www.crunchbase.com/organization/"}
+        return {
+            "wikidata": "https://www.wikidata.org/wiki/",
+            "crunchbase": "https://www.crunchbase.com/organization/",
+        }
 
     def get_requested_collection(self, collection, kg="wikidata"):
         self.update_mappings()

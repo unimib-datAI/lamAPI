@@ -1,5 +1,6 @@
 from model.utils import build_error, recognize_entity
 
+
 class PredicatesRetriever:
     def __init__(self, database):
         self.database = database
@@ -31,17 +32,17 @@ class PredicatesRetriever:
             entities = []
         if kg not in self.database.get_supported_kgs():
             raise ValueError(f"Knowledge graph '{kg}' is not supported.")
-        
+
         query = {"entity": {"$in": entities}}
         return self.database.get_requested_collection("objects", kg).find(query)
 
     def get_objects(self, entities=None, kg="wikidata"):
         if entities is None:
             entities = []
-        
+
         entity_objects = {}
         objects_retrieved = self.get_objects_from_db(entities=entities, kg=kg)
-        
+
         for entity_type in objects_retrieved:
             entity_id = entity_type["entity"]
             entity_types = entity_type.get("objects", [])
@@ -52,9 +53,9 @@ class PredicatesRetriever:
     def get_predicates_output(self, entities=None, kg="wikidata"):
         if entities is None:
             entities = []
-        
+
         all_entities, sub_obj_mapping = self.prepare_data(entities)
-        if isinstance(all_entities, tuple) and all_entities[0] == 'error':
+        if isinstance(all_entities, tuple) and all_entities[0] == "error":
             return all_entities  # return error if prepare_data encountered an issue
 
         entity_objects = self.get_objects(all_entities, kg)
@@ -66,7 +67,9 @@ class PredicatesRetriever:
                 if subj in entity_objects:
                     for current_obj in sub_obj_mapping[subj]:
                         if current_obj in entity_objects[subj]["objects"]:
-                            wiki_response[f"{subj} {current_obj}"] = entity_objects[subj]["objects"][current_obj]
+                            wiki_response[f"{subj} {current_obj}"] = entity_objects[
+                                subj
+                            ]["objects"][current_obj]
 
             final_response = wiki_response
 

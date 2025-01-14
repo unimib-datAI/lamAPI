@@ -1,6 +1,7 @@
 import os
-from elasticsearch import Elasticsearch, ConnectionError
 from time import sleep
+
+from elasticsearch import ConnectionError, Elasticsearch
 
 # Extract environment variables
 ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
@@ -15,7 +16,10 @@ class Elastic:
         retry = 0
         while retry < max_retry:
             try:
-                es = Elasticsearch(hosts=f"http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}", request_timeout=60)
+                es = Elasticsearch(
+                    hosts=f"http://{ELASTIC_ENDPOINT}:{ELASTIC_PORT}",
+                    request_timeout=60,
+                )
                 if es.ping():
                     print("Connected to Elasticsearch")
                     return es
@@ -32,14 +36,16 @@ class Elastic:
         try:
             if "_source" not in body:
                 body["_source"] = {"excludes": ["language"]}
-                
-            query_result = self._elastic.search(index=kg, 
-                                                query=body["query"], 
-                                                _source_excludes=body["_source"]["excludes"],
-                                                size=limit)
+
+            query_result = self._elastic.search(
+                index=kg,
+                query=body["query"],
+                _source_excludes=body["_source"]["excludes"],
+                size=limit,
+            )
             hits = query_result["hits"]["hits"]
             max_score = query_result["hits"]["max_score"]
-            
+
             if len(hits) == 0:
                 return []
 
