@@ -68,7 +68,7 @@ This algorithm describes the process of extending entity types by retrieving the
 2. Types are extended if they are present in one of the following lists:
    - **`organization_subclass`**
    - **`geolocation_subclass`**
-   - **`person`** (limited to the ID `5` - *Q5*, representing "human").
+   - **`person`**
 
 3. **Adjustments for `organization_subclass`:**
    - Certain subclasses are **excluded** from the `organization_subclass` list, such as:
@@ -79,7 +79,7 @@ This algorithm describes the process of extending entity types by retrieving the
 
 4. **Type Classification:**
    - For each entity, the list of mapped **NER type** among the extended types is selected as the final classification.
-   - Example: If an entity has types that are all present in `geolocation_subclass`, it will be classified as **LOC (Location)**.
+   - Example: If an entity has types that are all present in `geolocation_subclass`, it will be classified as **LOC (Location)**. If the explicit types of an entity belong to different mapped **NER type** the entity will have alist of NER types.
 
 ---
 
