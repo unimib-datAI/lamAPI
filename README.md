@@ -65,10 +65,12 @@ This algorithm describes the process of extending entity types by retrieving the
 #### Algorithm Overview
 
 1. **For each Wikidata (WD) entity**, all associated types are evaluated for extension.
-2. Types are extended if they are present in one of the following lists:
+2. Types are extended if they are present in one of the following lists of macro classes:
    - **`organization_subclass`**
    - **`geolocation_subclass`**
    - **`person`**
+Their creation is done as specified in the paper **"NECKAr"**: for each macro class the list with their subclasses and their types "instance of" are included. In the following example the complete list of types "instance of" **capital city** are included into the **`geolocation_subclass`** list:
+![subtype hierarchy](./pictures/ner_hierarchy.png)
 
 3. **Adjustments for `organization_subclass`:**
    - Certain subclasses are **excluded** from the `organization_subclass` list, such as:
