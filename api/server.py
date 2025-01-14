@@ -1,6 +1,7 @@
 import json
-import traceback
 import logging
+import traceback
+
 from flask import Flask, request
 from flask_restx import Api, Resource, fields, reqparse
 from model.data_retrievers.column_analysis import ColumnAnalysis
@@ -11,13 +12,12 @@ from model.data_retrievers.lookup_retriever import LookupRetriever
 from model.data_retrievers.ner_recognizer import NERRecognizer
 from model.data_retrievers.objects_retriever import ObjectsRetriever
 from model.data_retrievers.predicates_retriever import PredicatesRetriever
-from model.data_retrievers.types_retriever import TypesRetriever
 from model.data_retrievers.sameas_retriever import SameasRetriever
 from model.data_retrievers.summary_retriever import SummaryRetriever
+from model.data_retrievers.types_retriever import TypesRetriever
+from model.database import Database
 from model.params_validator import ParamsValidator
 from model.utils import build_error
-from model.database import Database
-
 
 database = Database()
 
@@ -39,23 +39,25 @@ lookup_retriever = LookupRetriever(database)
 ner_recognition = NERRecognizer()
 summary_retriever = SummaryRetriever(database)
 
+
 def init_services():
-    with open('data.txt') as f:
+    with open("data.txt") as f:
         description = f.read()
     app = Flask("LamAPI")
-        # Configure logging
+    # Configure logging
     logging.basicConfig(level=logging.DEBUG)
     app.logger.setLevel(logging.DEBUG)
-    api = Api(app, version='1.0', title='LamAPI', description=description)
+    api = Api(app, version="1.0", title="LamAPI", description=description)
 
     namespaces = {
-        'info': api.namespace('info'),
-        'entity': api.namespace('entity',
-                                description='Services to perform computations and retrieve additional data about entities.'),
-        'lookup': api.namespace('lookup', description='Services to perform searches based on an input string.'),
-        'sti': api.namespace('sti', description='Services to perform tasks related to Semantic Table Interpretation.'),
-        'classify': api.namespace('classify', description='Services to perform string categorisation.'),
-        'summary': api.namespace('summary', description='Services to get summary statiscs about the datasets.')
+        "info": api.namespace("info"),
+        "entity": api.namespace(
+            "entity", description="Services to perform computations and retrieve additional data about entities."
+        ),
+        "lookup": api.namespace("lookup", description="Services to perform searches based on an input string."),
+        "sti": api.namespace("sti", description="Services to perform tasks related to Semantic Table Interpretation."),
+        "classify": api.namespace("classify", description="Services to perform string categorisation."),
+        "summary": api.namespace("summary", description="Services to get summary statiscs about the datasets."),
     }
 
     return app, api, namespaces
@@ -63,100 +65,84 @@ def init_services():
 
 app, api, namespaces = init_services()
 
-info = namespaces['info']
-entity = namespaces['entity']
-lookup = namespaces['lookup']
-sti = namespaces['sti']
-classify = namespaces['classify']
-summary = namespaces['summary']
+info = namespaces["info"]
+entity = namespaces["entity"]
+lookup = namespaces["lookup"]
+sti = namespaces["sti"]
+classify = namespaces["classify"]
+summary = namespaces["summary"]
 
-fields_predicates = info.model('Predicates', {
-    'json': fields.List(fields.List(fields.String), example=[
-        ['Q30', 'Q60'], ['Q166262', 'Q25191']
-    ])
-})
-
-fields_objects = info.model('Objects', {
-    'json': fields.List(fields.String, example=[
-        'Q30', 'Q166262'
-    ])
-})
-
-fields_sameas = info.model('SameAS', {
-    'json': fields.List(fields.String, example=[
-        'Q30', 'Q31'
-    ])
-})
-
-fields_literals = info.model('Literals', {
-    'json': fields.List(fields.String, example=[
-        'Q30', 'Q31'
-    ])
-})
-
-fields_types = info.model('Concepts', {
-    'json': fields.List(fields.String, example=[
-        'Q30', 'Q31'
-    ])
-})
-
-fields_literal_recognizer = info.model('LiteralRecognizer', {
-    'json': fields.List(fields.String, example=[
-        "50",
-        "12/11/1997",
-        "https://www.unimib.it/",
-        "mario.rossi@gmail.it",
-        "Mount Blanc is located in Aosta Valley"
-    ])
-})
-
-fields_labels = info.model('Labels', {
-    'json': fields.List(fields.String, example=[
-        'Q30', 'Q31'
-    ])
-})
-
-fields_rdf2vec = info.model('RDF2Vec', {
-    'json': fields.List(fields.String, example=[
-        'Q30', 'Q31'
-    ])
-})
-
-fields_column_analysis = info.model('ColumnAnalysis', {
-    'json': fields.List(fields.List(fields.String),
-                        example=[['10', '100', '1000'], ['12/11/1997', '26/08/1997', '14/05/2016'],
-                                 ['London', 'New York', 'Paris']])
-})
-
-fields_ner = info.model('NERRecognizer', {
-    'json': fields.List(fields.String, example=[
-        'Albert Einstein was a German Scientist', 'Alan Turing was an English Mathematician'
-    ])
-})
-
-fields_cells = api.model("Cells",  {
-    "cells": fields.List(fields.String(), required=True, example=["Rome", "Paris", "Praga"])
-})
-
-@info.route('')
-@api.doc(
-    responses={200: "OK"},
-    description='Infos about this endpoint'
+fields_predicates = info.model(
+    "Predicates", {"json": fields.List(fields.List(fields.String), example=[["Q30", "Q60"], ["Q166262", "Q25191"]])}
 )
+
+fields_objects = info.model("Objects", {"json": fields.List(fields.String, example=["Q30", "Q166262"])})
+
+fields_sameas = info.model("SameAS", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
+
+fields_literals = info.model("Literals", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
+
+fields_types = info.model("Concepts", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
+
+fields_literal_recognizer = info.model(
+    "LiteralRecognizer",
+    {
+        "json": fields.List(
+            fields.String,
+            example=[
+                "50",
+                "12/11/1997",
+                "https://www.unimib.it/",
+                "mario.rossi@gmail.it",
+                "Mount Blanc is located in Aosta Valley",
+            ],
+        )
+    },
+)
+
+fields_labels = info.model("Labels", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
+
+fields_rdf2vec = info.model("RDF2Vec", {"json": fields.List(fields.String, example=["Q30", "Q31"])})
+
+fields_column_analysis = info.model(
+    "ColumnAnalysis",
+    {
+        "json": fields.List(
+            fields.List(fields.String),
+            example=[
+                ["10", "100", "1000"],
+                ["12/11/1997", "26/08/1997", "14/05/2016"],
+                ["London", "New York", "Paris"],
+            ],
+        )
+    },
+)
+
+fields_ner = info.model(
+    "NERRecognizer",
+    {
+        "json": fields.List(
+            fields.String,
+            example=["Albert Einstein was a German Scientist", "Alan Turing was an English Mathematician"],
+        )
+    },
+)
+
+fields_cells = api.model(
+    "Cells", {"cells": fields.List(fields.String(), required=True, example=["Rome", "Paris", "Praga"])}
+)
+
+
+@info.route("")
+@api.doc(responses={200: "OK"}, description="Infos about this endpoint")
 class Info(Resource):
     def get(self):
         info_obj = {
             "title": "LamAPI",
             "description": "This is an API which retrieves data about entities in different Knowledge Graphs and performs entity linking task.",
-            "contact": {
-                "organization": "SINTEF, Oslo, Norway",
-                "email": "roberto.avogadro@sintef.no"
-            },
-            "license": {
-                "name": "Apache 2.0",
-                "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
-            },
-            "version": "1.0.0"
+            "contact": {"organization": "SINTEF, Oslo, Norway", "email": "roberto.avogadro@sintef.no"},
+            "license": {"name": "Apache 2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0.html"},
+            "version": "1.0.0",
         }
         return info_obj, 200
 
@@ -165,16 +151,15 @@ class BaseEndpoint(Resource):
 
     def validate_and_get_json_format(self):
         try:
-            data = request.get_json()['json']
+            data = request.get_json()["json"]
         except:
             return False, build_error("Invalid json format", 400)
         return True, data
 
 
-@lookup.route('/entity-retrieval')
+@lookup.route("/entity-retrieval")
 @api.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
+    responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     params={
         "name": "Name to look for (e.g., Batman Begins).",
         "limit": "The number of entities to be retrieved. The default value is 100.",
@@ -183,21 +168,21 @@ class BaseEndpoint(Resource):
         "kg": "The Knowledge Graph to query. Available values: <code>wikidata</code>.",
         "fuzzy": "Set this param to True if fuzzy search must be applied. Default is <code>False</code>.",
         "types": "Types to be matched in the Knowledge Graph as constraint in the retrieval. Add Types separeted by spaces. E.g. Scientist Philosopher Person",
-        "ids": "Ids of the entity"
+        "ids": "Ids of the entity",
     },
-    description="Given a string as input, the endpoint performs a search in the specified Knowledge Graph."
+    description="Given a string as input, the endpoint performs a search in the specified Knowledge Graph.",
 )
 class Lookup(BaseEndpoint):
     def get(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('name', type=str, location="args")
-        parser.add_argument('limit', type=str, location="args")
-        parser.add_argument('token', type=str, location="args")
-        parser.add_argument('description', type=str, location="args")
-        parser.add_argument('kg', type=str, location="args")
-        parser.add_argument('fuzzy', type=str, location="args")
-        parser.add_argument('types', type=str, location="args")
-        parser.add_argument('ids', type=str, location="args")
+        parser.add_argument("name", type=str, location="args")
+        parser.add_argument("limit", type=str, location="args")
+        parser.add_argument("token", type=str, location="args")
+        parser.add_argument("description", type=str, location="args")
+        parser.add_argument("kg", type=str, location="args")
+        parser.add_argument("fuzzy", type=str, location="args")
+        parser.add_argument("types", type=str, location="args")
+        parser.add_argument("ids", type=str, location="args")
         args = parser.parse_args()
 
         name = args["name"]
@@ -209,54 +194,55 @@ class Lookup(BaseEndpoint):
         types = args["types"]
         ids = args["ids"]
 
-        
         token_is_valid, token_error = params_validator.validate_token(token)
         if not token_is_valid:
             return token_error
 
         is_fuzzy_valid, fuzzy_value = params_validator.validate_bool(fuzzy)
-       
+
         if not is_fuzzy_valid:
             return fuzzy_value
-
 
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
         if not kg_is_valid:
             return kg_error_or_value
-       
+
         limit_is_valid, limit_error_or_value = params_validator.validate_limit(limit)
         if not limit_is_valid:
             return limit_error_or_value
 
         if name is None:
             return build_error("Name is not defined", 400)
-        
+
         try:
-            results = lookup_retriever.search(name, limit=limit_error_or_value, kg=kg_error_or_value, 
-                                                fuzzy=fuzzy_value, types=types, ids=ids)
+            results = lookup_retriever.search(
+                name, limit=limit_error_or_value, kg=kg_error_or_value, fuzzy=fuzzy_value, types=types, ids=ids
+            )
         except Exception as e:
             return build_error(f"Elastic error: {str(e)}", 400, traceback=traceback.format_exc())
 
         return results
 
 
-@entity.route('/types')
+@entity.route("/types")
 @api.doc(
-    description='Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns the associated TYPES for each entity.',
-    params={"token": "Private token to access the APIs.",
-            "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
+    description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns the associated TYPES for each entity.",
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+    },
 )
 class Types(BaseEndpoint):
     @entity.doc(body=fields_types)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
-        parser.add_argument('kg', type=str)
+        parser.add_argument("token", type=str)
+        parser.add_argument("kg", type=str)
         args = parser.parse_args()
 
         token = args["token"]
-        kg = args['kg']
+        kg = args["kg"]
 
         token_is_valid, token_error = params_validator.validate_token(token)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
@@ -273,23 +259,25 @@ class Types(BaseEndpoint):
                 return build_error("Invalid Data", 400)
 
 
-@entity.route('/objects')
+@entity.route("/objects")
 @api.doc(
-    description='Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of OBJECTS for each entity.',
-    params={"token": "Private token to access the APIs.",
-            "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
+    description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of OBJECTS for each entity.",
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+    },
 )
 class Objects(BaseEndpoint):
     @entity.doc(body=fields_objects)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
-        parser.add_argument('kg', type=str)
+        parser.add_argument("token", type=str)
+        parser.add_argument("kg", type=str)
         args = parser.parse_args()
 
         token = args["token"]
-        kg = args['kg']
+        kg = args["kg"]
 
         token_is_valid, token_error = params_validator.validate_token(token)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
@@ -311,23 +299,25 @@ class Objects(BaseEndpoint):
                 return build_error("Invalid Data", 400, traceback=traceback.format_exc())
 
 
-@entity.route('/predicates')
+@entity.route("/predicates")
 @api.doc(
-    description='Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of PREDICATES between each pair of entities (SUBJECT and OBJECT).',
-    params={"token": "Private token to access the APIs.",
-            "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
+    description="Given a JSON array as input composed of DBPedia or Wikidata entities, the endpoint returns a list of PREDICATES between each pair of entities (SUBJECT and OBJECT).",
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+    },
 )
 class Predicates(BaseEndpoint):
     @entity.doc(body=fields_predicates)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
-        parser.add_argument('kg', type=str)
+        parser.add_argument("token", type=str)
+        parser.add_argument("kg", type=str)
         args = parser.parse_args()
 
         token = args["token"]
-        kg = args['kg']
+        kg = args["kg"]
 
         token_is_valid, token_error = params_validator.validate_token(token)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
@@ -344,31 +334,33 @@ class Predicates(BaseEndpoint):
                 return build_error("Invalid Data", 400)
 
 
-@entity.route('/labels')
+@entity.route("/labels")
 @api.doc(
-    description='Given a JSON array as input composed of DBpedia or Wikidata entities, the endpoint returns a list of LABELS and ALIASES for each entity. It\'s also possible to specify the language to filter the labels.',
-    params={"token": "Private token to access the APIs.",
-            "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
-            "lang": "Language to filter the labels."}
+    description="Given a JSON array as input composed of DBpedia or Wikidata entities, the endpoint returns a list of LABELS and ALIASES for each entity. It's also possible to specify the language to filter the labels.",
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+        "lang": "Language to filter the labels.",
+    },
 )
 class Labels(BaseEndpoint):
     @entity.doc(body=fields_labels)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
-        parser.add_argument('kg', type=str)
-        parser.add_argument('lang', type=str)
+        parser.add_argument("token", type=str)
+        parser.add_argument("kg", type=str)
+        parser.add_argument("lang", type=str)
         args = parser.parse_args()
 
         token = args["token"]
-        kg = args['kg']
+        kg = args["kg"]
         lang = args["lang"]
 
         try:
             token_is_valid, token_error = params_validator.validate_token(token)
             kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
-            
+
             if not token_is_valid:
                 return token_error
             elif not kg_is_valid:
@@ -380,20 +372,20 @@ class Labels(BaseEndpoint):
                 else:
                     return build_error("Invalid Data", 400)
         except Exception as e:
-            return build_error(f"Error: {str(e)}", 400)        
+            return build_error(f"Error: {str(e)}", 400)
 
 
-@entity.route('/sameas')
+@entity.route("/sameas")
 @api.doc(
-    description='Given a JSON array as input composed of Wikidata entities, the endpoint returns the associated entities in Wikipedia and DBpedia.',
-    params={"token": "Private token to access the API."}
+    description="Given a JSON array as input composed of Wikidata entities, the endpoint returns the associated entities in Wikipedia and DBpedia.",
+    params={"token": "Private token to access the API."},
 )
 class SameAs(BaseEndpoint):
     @entity.doc(body=fields_sameas)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
+        parser.add_argument("token", type=str)
         args = parser.parse_args()
 
         token = args["token"]
@@ -410,7 +402,7 @@ class SameAs(BaseEndpoint):
                 build_error("Invalid Data", 400)
 
 
-@classify.route('/literal-recognizer')
+@classify.route("/literal-recognizer")
 @api.doc(
     description="""
     Given a JSON array as input composed of a set of strings, the endpoint returns the types of literal. The list of literals recognized is:
@@ -443,14 +435,14 @@ class SameAs(BaseEndpoint):
     * 12:30pm
     * 2.30 am
     """,
-    params={"token": "Private token to access the APIs."}
+    params={"token": "Private token to access the APIs."},
 )
 class LiteralRecognizer(BaseEndpoint):
     @classify.doc(body=fields_literal_recognizer)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
+        parser.add_argument("token", type=str)
         args = parser.parse_args()
 
         token = args["token"]
@@ -467,19 +459,21 @@ class LiteralRecognizer(BaseEndpoint):
                 build_error("Invalid Data", 400)
 
 
-@entity.route('/literals')
+@entity.route("/literals")
 @entity.doc(
-    description='Given a JSON array as input made of DBpedia or Wikipedia entities, the endpoint returns the list of LITERALS classified as DATETIME, NUMBER or STRING for each entity.',
-    params={"token": "Private token to access the APIs.",
-            "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>."}
+    description="Given a JSON array as input made of DBpedia or Wikipedia entities, the endpoint returns the list of LITERALS classified as DATETIME, NUMBER or STRING for each entity.",
+    params={
+        "token": "Private token to access the APIs.",
+        "kg": "The Knowledge Graph to query. Available values: <code>dbpedia</code> or <code>wikidata</code>. Default is <code>dbpedia</code>.",
+    },
 )
 class Literals(BaseEndpoint):
     @entity.doc(body=fields_literals)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
-        parser.add_argument('kg', type=str)
+        parser.add_argument("token", type=str)
+        parser.add_argument("kg", type=str)
         args = parser.parse_args()
 
         token = args["token"]
@@ -500,17 +494,17 @@ class Literals(BaseEndpoint):
                 build_error("Invalid Data", 400)
 
 
-@sti.route('/column-analysis')
+@sti.route("/column-analysis")
 @api.doc(
-    description='Given a JSON array as input composed of a set of array of strings (cell content), the endpoint calculates, for each array, if the content represents named-entitites or literals.',
-    params={"token": "Private token to access the APIs."}
+    description="Given a JSON array as input composed of a set of array of strings (cell content), the endpoint calculates, for each array, if the content represents named-entitites or literals.",
+    params={"token": "Private token to access the APIs."},
 )
 class ColumnAnalysis(BaseEndpoint):
     @api.doc(body=fields_column_analysis)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
+        parser.add_argument("token", type=str)
         args = parser.parse_args()
 
         token = args["token"]
@@ -527,17 +521,17 @@ class ColumnAnalysis(BaseEndpoint):
                 build_error("Invalid Data", 400)
 
 
-@classify.route('/name-entity-recognition')
+@classify.route("/name-entity-recognition")
 @api.doc(
-    description='Given a JSON array as input composed of a set of array of natural language, the endpoint performs the task of Name Entity Recogition and returns the list of mentions found i the text.',
-    params={"token": "Private token to access the APIs."}
+    description="Given a JSON array as input composed of a set of array of natural language, the endpoint performs the task of Name Entity Recogition and returns the list of mentions found i the text.",
+    params={"token": "Private token to access the APIs."},
 )
 class NERAnalysis(BaseEndpoint):
     @api.doc(body=fields_ner)
     def post(self):
         # get parameters
         parser = reqparse.RequestParser()
-        parser.add_argument('token', type=str)
+        parser.add_argument("token", type=str)
         args = parser.parse_args()
 
         token = args["token"]
@@ -554,8 +548,7 @@ class NERAnalysis(BaseEndpoint):
                 build_error("Invalid Data", 400)
 
 
-
-@summary.route('/')
+@summary.route("/")
 @api.doc(
     responses={200: "OK", 404: "Not found", 400: "Bad request", 403: "Invalid token"},
     params={
@@ -563,18 +556,18 @@ class NERAnalysis(BaseEndpoint):
         "data_type": "Type of data to retrieve. Values: 'objects' or 'literals'.",
         "rank_order": "Order of the results based on rank of predicates. Values: 'desc' or 'asc'.",
         "k": "Number of elements to return when ordering by rank. Default is 10.",
-        "token": "Private token to access the API."
+        "token": "Private token to access the API.",
     },
-    description="Returns the summary of the specified Knowledge Graph with optional ordering by rank of predicates."
+    description="Returns the summary of the specified Knowledge Graph with optional ordering by rank of predicates.",
 )
 class Summary(BaseEndpoint):
     def get(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('kg', type=str, location="args", default='wikidata')
-        parser.add_argument('data_type', type=str, location="args", default='objects')
-        parser.add_argument('rank_order', type=str, location="args")
-        parser.add_argument('k', type=int, location="args")
-        parser.add_argument('token', type=str, location="args")
+        parser.add_argument("kg", type=str, location="args", default="wikidata")
+        parser.add_argument("data_type", type=str, location="args", default="objects")
+        parser.add_argument("rank_order", type=str, location="args")
+        parser.add_argument("k", type=int, location="args")
+        parser.add_argument("token", type=str, location="args")
         args = parser.parse_args()
 
         kg = args["kg"]
@@ -594,21 +587,18 @@ class Summary(BaseEndpoint):
             return build_error("Invalid KG. Use 'wikidata'", 400)
 
         # Validate rank order
-        if rank_order and rank_order not in ['asc', 'desc']:
+        if rank_order and rank_order not in ["asc", "desc"]:
             return build_error("Invalid rank order. Use 'asc' or 'desc'.", 400)
 
         # If k is not provided, use default value
         k = k if k is not None else 10
 
         # Implement the logic to retrieve Wikidata or DBpedia summary based on parameters
-        if data_type == 'objects':
+        if data_type == "objects":
             results = summary_retriever.get_objects_summary(kg=kg_error_or_value, rank_order=rank_order, k=k)
-        elif data_type == 'literals':
+        elif data_type == "literals":
             results = summary_retriever.get_literals_summary(kg=kg_error_or_value, rank_order=rank_order, k=k)
         else:
             return build_error("Invalid data type. Use 'objects' or 'literals'.", 400)
 
         return results
-
-
-    

@@ -6,16 +6,15 @@ import bz2
 import json
 import os
 import sys
+import time
 import traceback
+from collections import Counter
 from datetime import datetime
 
 from pymongo import MongoClient
-from tqdm import tqdm
-from datetime import datetime
 from requests import get
-from collections import Counter
-from SPARQLWrapper import SPARQLWrapper, JSON
-import time
+from SPARQLWrapper import JSON, SPARQLWrapper
+from tqdm import tqdm
 
 
 def create_indexes(db):
@@ -138,14 +137,15 @@ def flush_buffer(buffer):
         if len(buffer[key]) > 0:
             c_ref[key].insert_many(buffer[key])
             buffer[key] = []
-            
+
+
 def get_wikidata_item_tree_item_idsSPARQL(root_items, forward_properties=None, backward_properties=None):
     """Return ids of WikiData items, which are in the tree spanned by the given root items and claims relating them
         to other items.
     --------------------------------------------
-    For example, if you have an item with types A, B, and C, and you specify a forward property that applies to type B, the item will 
+    For example, if you have an item with types A, B, and C, and you specify a forward property that applies to type B, the item will
     be included in the result because it has type B, even if it also has types A and C
-    --------------------------------------------  
+    --------------------------------------------
     :param root_items: iterable[int] One or multiple item entities that are the root elements of the tree
     :param forward_properties: iterable[int] | None property-claims to follow forward; that is, if root item R has
         a claim P:I, and P is in the list, the search will branch recursively to item I as well.
@@ -154,34 +154,40 @@ def get_wikidata_item_tree_item_idsSPARQL(root_items, forward_properties=None, b
     :return: iterable[int]: List with ids of WikiData items in the tree
     """
 
-    query = '''PREFIX wikibase: <http://wikiba.se/ontology#>
+    query = """PREFIX wikibase: <http://wikiba.se/ontology#>
             PREFIX wd: <http://www.wikidata.org/entity/>
             PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'''
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>"""
     if forward_properties:
-        query +='''SELECT ?WD_id WHERE {
+        query += """SELECT ?WD_id WHERE {
                   ?tree0 (wdt:P%s)* ?WD_id .
                   BIND (wd:%s AS ?tree0)
-                  }'''%( ','.join(map(str, forward_properties)),','.join(map(str, root_items)))
+                  }""" % (
+            ",".join(map(str, forward_properties)),
+            ",".join(map(str, root_items)),
+        )
     elif backward_properties:
-        query+='''SELECT ?WD_id WHERE {
+        query += """SELECT ?WD_id WHERE {
                     ?WD_id (wdt:P%s)* wd:Q%s .
-                    }'''%(','.join(map(str, backward_properties)), ','.join(map(str, root_items)))
-    #print(query)
+                    }""" % (
+            ",".join(map(str, backward_properties)),
+            ",".join(map(str, root_items)),
+        )
+    # print(query)
 
-    url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
-    data = get(url, params={'query': query, 'format': 'json'}).json()
-    
+    url = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
+    data = get(url, params={"query": query, "format": "json"}).json()
+
     ids = []
-    for item in data['results']['bindings']:
-        this_id=item["WD_id"]["value"].split("/")[-1].lstrip("Q")
-        #print(item)
+    for item in data["results"]["bindings"]:
+        this_id = item["WD_id"]["value"].split("/")[-1].lstrip("Q")
+        # print(item)
         try:
             this_id = int(this_id)
             ids.append(this_id)
-            #print(this_id)
+            # print(this_id)
         except ValueError:
-            #print("exception")
+            # print("exception")
             continue
     return ids
 
@@ -234,23 +240,22 @@ def retrieve_superclasses(entity_id):
         for result in results["results"]["bindings"]:
             superclass_id = result["superclass"]["value"].split("/")[-1]  # Extract entity ID from the URI
             label = result["superclassLabel"]["value"]
-            superclass_dict[label] =  "Q"+(superclass_id[1:])
+            superclass_dict[label] = "Q" + (superclass_id[1:])
         return list(superclass_dict.values())
     else:
         print("Failed to retrieve data after multiple attempts.")
         return []
 
-            
+
 def parse_data(item, i, geolocation_subclass, organization_subclass):
     entity = item["id"]
     labels = item.get("labels", {})
     aliases = item.get("aliases", {})
     english_label = labels.get("en", {}).get("value", "")
-    description = item.get('descriptions', {}).get('en', {})
+    description = item.get("descriptions", {}).get("en", {})
     category = "entity"
     sitelinks = item.get("sitelinks", {})
     popularity = len(sitelinks) if len(sitelinks) > 0 else 1
-    
 
     all_labels = {}
     for lang in labels:
@@ -275,14 +280,14 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
 
     ###############################################################
     # ORGANIZATION EXTRACTION
-    # All items with the root class Organization (Q43229) excluding country (Q6256), city (Q515), capitals (Q5119), 
-    # administrative territorial entity of a single country (Q15916867), venue (Q17350442), sports league (Q623109) 
+    # All items with the root class Organization (Q43229) excluding country (Q6256), city (Q515), capitals (Q5119),
+    # administrative territorial entity of a single country (Q15916867), venue (Q17350442), sports league (Q623109)
     # and family (Q8436)
-    
+
     # LOCATION EXTRACTION
-    # All items with the root class Geographic Location (Q2221906) excluding: food (Q2095), educational institution (Q2385804), 
+    # All items with the root class Geographic Location (Q2221906) excluding: food (Q2095), educational institution (Q2385804),
     # government agency (Q327333), international organization (Q484652) and time zone (Q12143)
-    
+
     # PERSON EXTRACTION
     # All items with the statement is instance of (P31) human (Q5) are classiﬁed as person.
 
@@ -291,8 +296,8 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
     if item.get("type") == "item" and "claims" in item:
         p31_claims = item["claims"].get("P31", [])
         ner_counter = Counter()
-        
-        if len(p31_claims) != 0:           
+
+        if len(p31_claims) != 0:
             for claim in p31_claims:
                 mainsnak = claim.get("mainsnak", {})
                 datavalue = mainsnak.get("datavalue", {})
@@ -300,29 +305,27 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
 
                 # Classify NER types
                 if numeric_id == 5:
-                    ner_counter['PERS'] += 1
+                    ner_counter["PERS"] += 1
                 elif numeric_id in geolocation_subclass:
-                    ner_counter['LOC'] += 1
+                    ner_counter["LOC"] += 1
                 elif numeric_id in organization_subclass:
-                    ner_counter['ORG'] += 1
+                    ner_counter["ORG"] += 1
                 else:
-                    ner_counter['OTHERS'] += 1
-                    
-                
+                    ner_counter["OTHERS"] += 1
+
             # Add numeric_id to all NER categories it belongs to
             for ner_type in ner_counter:
-                if ner_type == 'ORG':
-                    NERtype.append("ORG")  
-                elif ner_type == 'PERS':
-                    NERtype.append("PERS") 
-                elif ner_type == 'LOC':
+                if ner_type == "ORG":
+                    NERtype.append("ORG")
+                elif ner_type == "PERS":
+                    NERtype.append("PERS")
+                elif ner_type == "LOC":
                     NERtype.append("LOC")
-                elif ner_type == 'OTHERS':
+                elif ner_type == "OTHERS":
                     NERtype.append("OTHERS")
-        
-                        
-    ################################################################
-    # TRANSITIVE CLOSURE
+
+        ################################################################
+        # TRANSITIVE CLOSURE
 
         p31_claims = item["claims"].get("P31", [])
 
@@ -332,35 +335,34 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             mainsnak = claim.get("mainsnak", {})
             datavalue = mainsnak.get("datavalue", {})
             type_numeric_id = datavalue.get("value", {}).get("numeric-id")
-            types_list.append("Q"+str(type_numeric_id))
+            types_list.append("Q" + str(type_numeric_id))
 
     extended_WDtypes = []
     total = []
     for el in types_list:
         total += retrieve_superclasses(el)
     extended_WDtypes = set(total)
-    
-    ################################################################   
+
+    ################################################################
     # URL EXTRACTION
 
     try:
         lang = labels.get("en", {}).get("language", "")
-        tmp={}
-        tmp["WD_id"] = item['id']
+        tmp = {}
+        tmp["WD_id"] = item["id"]
         tmp["WP_id"] = labels.get("en", {}).get("value", "")
 
-        url_dict={}
-        url_dict["wikidata"] = "http://www.wikidata.org/wiki/"+tmp["WD_id"]
-        url_dict["wikipedia"] = "http://"+lang+".wikipedia.org/wiki/"+sitelinks['enwiki']['title'].replace(' ','_')
-        url_dict["dbpedia"] = "http://dbpedia.org/resource/"+sitelinks['enwiki']['title'].replace(' ','_')
-                    
+        url_dict = {}
+        url_dict["wikidata"] = "http://www.wikidata.org/wiki/" + tmp["WD_id"]
+        url_dict["wikipedia"] = (
+            "http://" + lang + ".wikipedia.org/wiki/" + sitelinks["enwiki"]["title"].replace(" ", "_")
+        )
+        url_dict["dbpedia"] = "http://dbpedia.org/resource/" + sitelinks["enwiki"]["title"].replace(" ", "_")
 
     except json.decoder.JSONDecodeError:
-       pass
-    
-    ################################################################    
+        pass
 
-
+    ################################################################
 
     objects = {}
     literals = {datatype: {} for datatype in DATATYPES}
@@ -374,30 +376,18 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
             "aliases": all_aliases,
             "types": types,
             "popularity": popularity,
-            "kind": category,   # kind (entity, type or predicate, disambiguation or category)
+            "kind": category,  # kind (entity, type or predicate, disambiguation or category)
             ######################
             # new updates
-            "NERtype": NERtype, # (list of ORG, LOC, PER or OTHERS)
-            "URLs" : url_dict,
-            "extended_WDtypes" : extended_WDtypes,  # list of extended types
-            "explicit_WDtypes" : types_list    # list of extended types
+            "NERtype": NERtype,  # (list of ORG, LOC, PER or OTHERS)
+            "URLs": url_dict,
+            "extended_WDtypes": extended_WDtypes,  # list of extended types
+            "explicit_WDtypes": types_list,  # list of extended types
             ######################
         },
-        "objects": { 
-            "id_entity": i,
-            "entity": entity,
-            "objects":objects
-        },
-        "literals": { 
-            "id_entity": i,
-            "entity": entity,
-            "literals": literals
-        },
-        "types": { 
-            "id_entity": i,
-            "entity": entity,
-            "types": types
-        },
+        "objects": {"id_entity": i, "entity": entity, "objects": objects},
+        "literals": {"id_entity": i, "entity": entity, "literals": literals},
+        "types": {"id_entity": i, "entity": entity, "types": types},
         "objects": {"id_entity": i, "entity": entity, "objects": objects},
         "literals": {"id_entity": i, "entity": entity, "literals": literals},
         "types": {"id_entity": i, "entity": entity, "types": types},
@@ -427,8 +417,6 @@ def parse_data(item, i, geolocation_subclass, organization_subclass):
                 if predicate not in lit:
                     lit[predicate] = []
                 lit[predicate].append(value)
-
-     
 
     for key in buffer:
         buffer[key].append(join[key])
@@ -481,7 +469,16 @@ def parse_wikidata_dump():
         venue_subclass = []
 
     # Removing overlaps for organization_subclass
-    organization_subclass = list(set(organization_subclass) - set(country_subclass) - set(city_subclass) - set(capitals_subclass) - set(admTerr_subclass) - set(family_subclass) - set(sportLeague_subclass) - set(venue_subclass))
+    organization_subclass = list(
+        set(organization_subclass)
+        - set(country_subclass)
+        - set(city_subclass)
+        - set(capitals_subclass)
+        - set(admTerr_subclass)
+        - set(family_subclass)
+        - set(sportLeague_subclass)
+        - set(venue_subclass)
+    )
 
     try:
         geolocation_subclass = get_wikidata_item_tree_item_idsSPARQL([2221906], backward_properties=[279])
@@ -514,8 +511,14 @@ def parse_wikidata_dump():
         timeZone_subclass = []
 
     # Removing overlaps for geolocation_subclass
-    geolocation_subclass = list(set(geolocation_subclass) - set(food_subclass) - set(edInst_subclass) - set(govAgency_subclass) - set(intOrg_subclass) - set(timeZone_subclass))
-
+    geolocation_subclass = list(
+        set(geolocation_subclass)
+        - set(food_subclass)
+        - set(edInst_subclass)
+        - set(govAgency_subclass)
+        - set(intOrg_subclass)
+        - set(timeZone_subclass)
+    )
 
     pbar = tqdm(total=initial_total_lines_estimate)
     for i, line in enumerate(file):

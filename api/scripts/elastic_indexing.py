@@ -1,18 +1,16 @@
-import os
-import time
-import subprocess
 import json
-import sys
-import traceback
+import os
 import re
-
-from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk, BulkIndexError
-
-from pymongo import MongoClient
-from tqdm import tqdm
+import subprocess
+import sys
+import time
+import traceback
 
 from conf import MAPPING
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import BulkIndexError, bulk
+from pymongo import MongoClient
+from tqdm import tqdm
 
 
 def index_documents(es, buffer, max_retries=5):
@@ -171,7 +169,7 @@ try:
     index = 0
 
     # MongoDB fields like _id, labels, types are mapped to corresponding Elasticsearch fields like _id, name, types, etc.
-    
+
     for i, item in enumerate(tqdm(results, total=TOTAL_DOCS)):
         id_entity = item["entity"]
         names = list((item["labels"].values()))
