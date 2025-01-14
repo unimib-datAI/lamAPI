@@ -62,7 +62,7 @@ This algorithm describes the process of extending entity types by retrieving the
   - The mapping methodology is based on the paper **"NECKAr"** by Geiss et al. (2018).
 
 
-## Algorithm Overview
+#### Algorithm Overview
 
 1. **For each Wikidata (WD) entity**, all associated types are evaluated for extension.
 2. Types are extended if they are present in one of the following lists:
@@ -83,9 +83,9 @@ This algorithm describes the process of extending entity types by retrieving the
 
 ---
 
-## Example
+#### Example
 
-### Entity: Belgium (Q31)
+#### Entity: Belgium (Q31)
 - **Original Types:** Various types associated with Belgium.
 - **Processing:**
   - The types are checked against the `geolocation_subclass` and `organization_subclass`.
