@@ -20,7 +20,10 @@ from tqdm import tqdm
 def create_indexes(db):
     # Specify the collections and their respective fields to be indexed
     index_specs = {
-        "cache": ["cell", "lastAccessed"],  # Example: Indexing 'cell' and 'type' fields in 'cache' collection
+        "cache": [
+            "cell",
+            "lastAccessed",
+        ],  # Example: Indexing 'cell' and 'type' fields in 'cache' collection
         "items": ["id_entity", "entity", "category", "popularity"],
         "literals": ["id_entity", "entity"],
         "mappings": ["curid", "wikipedia_id", "wikidata_id", "dbpedia_id"],
@@ -30,7 +33,10 @@ def create_indexes(db):
 
     for collection, fields in index_specs.items():
         if collection == "cache":
-            db[collection].create_index([("cell", 1), ("fuzzy", 1), ("type", 1), ("kg", 1), ("limit", 1)], unique=True)
+            db[collection].create_index(
+                [("cell", 1), ("fuzzy", 1), ("type", 1), ("kg", 1), ("limit", 1)],
+                unique=True,
+            )
         elif collection == "items":
             db[collection].create_index([("entity", 1), ("category", 1)], unique=True)
         for field in fields:
@@ -62,7 +68,10 @@ formatted_date = current_date.strftime("%d%m%Y")
 DB_NAME = f"wikidata{formatted_date}"
 
 client = MongoClient(
-    MONGO_ENDPOINT, MONGO_ENDPOINT_PORT, username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD
+    MONGO_ENDPOINT,
+    MONGO_ENDPOINT_PORT,
+    username=MONGO_ENDPOINT_USERNAME,
+    password=MONGO_ENDPOINT_PASSWORD,
 )
 log_c = client.wikidata.log
 items_c = client[DB_NAME].items
@@ -70,7 +79,12 @@ objects_c = client[DB_NAME].objects
 literals_c = client[DB_NAME].literals
 types_c = client[DB_NAME].types
 
-c_ref = {"items": items_c, "objects": objects_c, "literals": literals_c, "types": types_c}
+c_ref = {
+    "items": items_c,
+    "objects": objects_c,
+    "literals": literals_c,
+    "types": types_c,
+}
 
 create_indexes(client[DB_NAME])
 
