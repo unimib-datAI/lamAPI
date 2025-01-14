@@ -169,6 +169,9 @@ try:
 
     buffer = []
     index = 0
+
+    # MongoDB fields like _id, labels, types are mapped to corresponding Elasticsearch fields like _id, name, types, etc.
+    
     for i, item in enumerate(tqdm(results, total=TOTAL_DOCS)):
         id_entity = item["entity"]
         names = list((item["labels"].values()))

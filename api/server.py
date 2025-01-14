@@ -365,19 +365,22 @@ class Labels(BaseEndpoint):
         kg = args['kg']
         lang = args["lang"]
 
-        token_is_valid, token_error = params_validator.validate_token(token)
-        kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
-
-        if not token_is_valid:
-            return token_error
-        elif not kg_is_valid:
-            return kg_error_or_value
-        else:
-            is_data_valid, data = super().validate_and_get_json_format()
-            if is_data_valid:
-                return labels_retriever.get_labels_output(data, kg_error_or_value, lang)
+        try:
+            token_is_valid, token_error = params_validator.validate_token(token)
+            kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
+            
+            if not token_is_valid:
+                return token_error
+            elif not kg_is_valid:
+                return kg_error_or_value
             else:
-                return build_error("Invalid Data", 400)
+                is_data_valid, data = super().validate_and_get_json_format()
+                if is_data_valid:
+                    return labels_retriever.get_labels_output(data, kg_error_or_value, lang)
+                else:
+                    return build_error("Invalid Data", 400)
+        except Exception as e:
+            return build_error(f"Error: {str(e)}", 400)        
 
 
 @entity.route('/sameas')

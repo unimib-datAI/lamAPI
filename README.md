@@ -1,133 +1,110 @@
-# LamAPI - Wikidata Label Matching API
+# Type Domain of Wikidata Entities
 
-## Introduction
+This repository explains the **type domain** of Wikidata entities as defined in our work. The entity types are categorized into three main groups: **Explicit Entity Types**, **Extended Entity Types**, and **NER Entity Types**. Below is a detailed explanation of each category:
 
-LamAPI provides a user-friendly interface for streamlined access to Wikidata, offering Full-Text search capabilities and detailed entity analysis.
+---
 
-## Data Processing Pipeline
+## Entity Type Categories
 
-The following diagram illustrates the data processing pipeline used by LamAPI:
+### 1. **Explicit Entity Types** (WD Types)
+- These are the **types explicitly associated** with entities in Wikidata.
+- They are **directly linked** to the entity through the Wikidata ontology.
+- Represent **predefined categories** such as:
+  - *Capital city*
+  - *Human*
+  - *Television series*
+- These types are detailed in tables referenced in the original work (e.g., tables showing data with and without filters).
 
-![Data Discovery: current workflow](./pictures/temp.svg)
+---
 
-LamAPI processes data from Wikidata through the following stages:
+### 2. **Extended Entity Types**
+- These types start as **explicit types** in Wikidata but are **extended through deterministic procedures**.
+- **Extension Process**:
+  - Includes operations such as **transitive closure**, which helps uncover indirect relationships or associations.
+  - Example: From the explicit type *Capital city*, additional related types such as *Administrative centre* or *Geographic location* are identified.
+- This category enhances the depth of classification by capturing **indirect associations** that are not directly stated in Wikidata.
 
-1. **Data Ingestion**: The large compressed Wikidata dump file is ingested into the LamAPI ecosystem.
-2. **Data Storage**: The ingested data is then decompressed and stored as JSON in MongoDB for structured and efficient data management.
-3. **Data Indexing**: Using Elasticsearch, the stored data is indexed to enable rapid and precise Full-Text search capabilities.
-4. **Service Interaction**: LamAPI exposes various services (lookup, objects, literals) that tap into the stored and indexed data to provide detailed information and analysis about entities within Wikidata.
+#### Algorithm: Extending Entity Types Using Superclass Retrieval with Recursive Relationships
 
-## Core Services
+This algorithm describes the process of extending entity types by retrieving their superclasses from a hierarchical ontology, such as Wikidata. It utilizes the **P279 ("subclass of")** property and employs a recursive pattern to traverse the hierarchy and include indirect relationships.
 
-LamAPI offers specialized services designed to cater to various data retrieval and analysis needs:
+---
 
-### Lookup Service
+#### Steps
 
-Conducts Full-Text searches across Wikidata to find entities matching input strings, providing quick access to a wealth of structured information.
+#### 1. **Input Collection**
+- Start with a list of **explicit types** associated with an entity, represented by their unique identifiers (e.g., `Q207784`).
 
-- **Input**: Search string, e.g., "Jurassic World".
-- **Output**: A list of entities related to the search term, including information like IDs and titles from Wikidata.
+---
 
-### Objects Service
+#### 2. **Define Query**
+- Construct a query to retrieve all **superclasses** of the given type(s) using the property **P279 ("subclass of")**.
+- Use a **recursive pattern** to traverse the hierarchy and include all parent classes:
+  ```sparql
+  ?entity (wdt:P279)* ?superclass
 
-Accesses relationships of Wikidata entities, allowing users to explore the connections and context of the data within the knowledge graph.
+---
 
-- **Input**: Entity ID, e.g., `Q35120246` for the film "Jurassic World".
-- **Output**: Object data showing properties such as 'director' (P57) -> Colin Trevorrow (`Q1545625`), 'distributed by' (P750) -> Universal Pictures (`Q35120246`).
-
-### Literals Service
-
-Retrieves literal values associated with entities, such as labels, descriptions, and specific property values.
-
-- **Input**: Entity ID, e.g., `Q35120246` for the film "Jurassic World".
-- **Output**: Literal data like 'duration' (P2047) -> 124 (minutes), 'publication date' (P577) -> 12/06/2015, and 'box office' (P2041) -> 1670400637.
-
-
-
-## Setup
-
-This section provides a detailed guide on setting up LamAPI, including environment preparation, data acquisition, and system initialization.
-
-### Prerequisites
-
-Ensure you have the necessary permissions set on local volume folders. This can be achieved by running:
-
-./setup-docker-volume.sh
+#### 3. **Extend types**
+- Combine the retrieved superclasses with the original explicit types.
+- The final extended types list will be a set of all the lists retrieved associated to the explicit WD types of the entity
 
 
-### Starting the Services
-
-Use `docker-compose` to initialize and run the LamAPI services:
-
-    docker-compose up 
-
-### Data Preparation
-
-#### Data Acquisition
-
-Download the data dump from ZENODO using the following link: [ZENODO Link](https://zenodo.org/record/10566718).
-
-#### Data Placement
-
-Move the downloaded dump to the `my-data` directory, which is mapped to the MongoDB container via a local volume.
-
-#### Decompression
-
-Unzip the data dump using the command:
-
-    unzip FILE_NAME
+### 3. **NER Entity Types** (NER Types)
+- A specialized form of **explicit type extension** that maps Wikidata types to **generic categories** based on a flat classification scheme.
+- Derived from the most common categories in **Named Entity Recognition (NER)** tasks.
+- The four macro-classes used are:
+  1. **ORG** (Organizations)
+  2. **LOC** (Locations)
+  3. **PERS** (Persons)
+  4. **OTHERS** (Entities outside these main categories)
+- **Implementation**:
+  - The mapping methodology is based on the paper **"NECKAr"** by Geiss et al. (2018).
 
 
-#### Data Import
-    docker exec -it lamapi_mongo bash -c 'cd /data/my-data && mongorestore --gzip --host=localhost --port=27017 --username="$MONGO_INITDB_ROOT_USERNAME" --password="$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase=admin 
-    --db=wikidata30062023 wikidata30062023'
+#### Algorithm Overview
 
-    
+1. **For each Wikidata (WD) entity**, all associated types are evaluated for extension.
+2. Types are extended if they are present in one of the following lists of macro classes:
+   - **`organization_subclass`**
+   - **`geolocation_subclass`**
+   - **`person`**
+   
+Their creation is done as specified in the paper **"NECKAr"**: for each macro class the list with their subclasses and their types "instance of" are included. In the following example the complete list of types "instance of" **capital city** are included into the **`geolocation_subclass`** list:
+![subtype hierarchy](./pictures/ner_hierarchy.png)
 
-    
-### Elasticsearch Indexing
+3. **Adjustments for `organization_subclass`:**
+   - Certain subclasses are **excluded** from the `organization_subclass` list, such as:
+     - Country
+     - Capitals
+     - Venues
+     - (and others as specified in the processing logic).
 
-To create the Elasticsearch index, follow these steps:
+4. **Type Classification:**
+   - For each entity, the list of mapped **NER type** among the extended types is selected as the final classification.
+   - Example: If an entity has types that are all present in `geolocation_subclass`, it will be classified as **LOC (Location)**. If the explicit types of an entity belong to different mapped **NER type** the entity will have alist of NER types.
 
-1. Access the API container:
-    ```
-    docker exec -it lamapi_api bash
-2. Navigate to the scripts directory:
-    ```
-    cd scripts
-3. Run the indexing script:
-    ```
-    python elastic_indexing.py <DATABASE NAME>
-It is recommended to use `tmux` or a similar tool to manage terminal sessions, which can help in monitoring the progress of long-running commands.
+---
 
-### Final Steps
+#### Example
 
-After completing the Elasticsearch indexing, LamAPI is fully set up. You can now start exploring its features and functionalities.
+#### Entity: Belgium (Q31)
+- **Original Types:** Various types associated with Belgium.
+- **Processing:**
+  - The types are checked against the `geolocation_subclass` and `organization_subclass`.
+  - Belgium (Q31) is classified as **LOC (Location)** and **ORG (Organization)**.
 
-Please ensure to replace `FILE_NAME`, `<DIRECTORY THAT CONTAINS THE DUMP>` and `<DATABASE NAME>` with your actual project details.
+---
 
-## Environment Configuration
+---
 
-To ensure the seamless operation of LamAPI, it's essential to configure environment variables according to your deployment environment and requirements. An environment template is provided in the repository to guide you through this process.
+## Purpose of This Work
+- To **categorize and expand the understanding** of entity types in Wikidata.
+- To enhance **classification and retrieval processes** by leveraging both direct and extended associations.
 
-### Using the Environment Template
+## References
+- For further information on the NER mapping approach, see: [NECKAr](https://link.springer.com/content/pdf/10.1007/978-3-319-73706-5_10.pdf) by Geiss et al.
 
-1. **Locate the Template**: Find the `env.template` file in the repository. This file contains all the necessary environment variables that need to be configured for LamAPI and its dependent services.
+---
 
-2. **Customize Your Settings**: Copy the `env.template` file to a new file named `.env` in the root of your project. Fill in the values for each environment variable based on your specific setup. Comments in the template provide guidance on the expected values.
-
-    - **Cluster Configuration**: Set up the cluster name, license type, and stack version.
-    - **Elasticsearch Configuration**: Configure the Elasticsearch username, password, endpoint, and other related settings.
-    - **Kibana Configuration**: Define the Kibana password and port number.
-    - **MongoDB Configuration**: Provide MongoDB connection details including the endpoint, root username, and password.
-    - **Other Configuration**: Adjust settings for threads, Python version, LamAPI token, supported knowledge graphs, and memory limits.
-
-3. **Apply the Configuration**: Ensure that the `.env` file is read by your application upon startup. Most deployment environments and frameworks automatically detect and use `.env` files.
-
-### Important Notes
-
-- **Security**: Never commit the `.env` file or any file containing sensitive credentials to version control. Always keep your passwords and tokens secure.
-- **Customization**: The provided values and settings are examples. You must customize them to fit your deployment and security requirements.
-- **Documentation**: Refer to the specific documentation of each component (Elasticsearch, Kibana, MongoDB, etc.) for more detailed configuration instructions and best practices.
-
-By following the environment template, you can tailor LamAPI's configuration to your project's needs, ensuring optimal performance and security.
+Feel free to explore the code and examples in this repository for a deeper understanding of how the entity types are defined, extended, and mapped to NER categories.

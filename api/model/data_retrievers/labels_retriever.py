@@ -21,7 +21,7 @@ class LabelsRetriever:
             retrieved_wikidata_data = self.get_labels(entities, kg, category)
             for obj in retrieved_wikidata_data:
                 final_result_wikidata[obj['entity']] = {
-                    "category": obj['category'],  
+                    "kind": obj['kind'],  
                     "url": self.database.get_url_kgs()[kg] + obj['entity'],
                     "description": obj['description'].get("value")
                 }
