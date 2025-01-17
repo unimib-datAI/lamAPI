@@ -183,3 +183,15 @@ work/differences_HardTableR3.csv
 work/differences_Round4.csv
 work/differences.csv
 work/organization_subclass.txt
+work/_2TR4/2T_ext_WD_query_type.json
+work/_2TR4/2T_NER_query_type.json
+work/_2TR4/2T_WD_query_type.json
+work/_HTR2/HTR2_ext_WD_query_type.json
+work/_HTR2/HTR2_NER_query_type.json
+work/_HTR2/HTR2_WD_query_type.json
+work/_HTR3/HTR3_ext_WD_query_type.json
+work/_HTR3/HTR3_NER_query_type.json
+work/_HTR3/HTR3_WD_query_type.json
+work/_Round4/R4_ext_WD_query_type.json
+work/_Round4/R4_NER_query_type.json
+work/_Round4/R4_WD_query_type.json
