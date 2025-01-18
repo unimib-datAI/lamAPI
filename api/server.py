@@ -257,6 +257,8 @@ class Lookup(BaseEndpoint):
         parser.add_argument("token", type=str, location="args")
         parser.add_argument("kind", type=str, location="args")
         parser.add_argument("NERtype", type=str, location="args")
+        parser.add_argument("WD_type", type=str, location="args")
+        parser.add_argument("ext_WD_type", type=str, location="args")
         parser.add_argument("kg", type=str, location="args")
         parser.add_argument("fuzzy", type=str, location="args")
         parser.add_argument("types", type=str, location="args")
@@ -274,6 +276,8 @@ class Lookup(BaseEndpoint):
         types = args["types"]
         kind = args["kind"]
         NERtype = args["NERtype"]
+        WD_type = args["WD_type"]
+        ext_WD_type = args["ext_WD_type"]
         language = args["language"]
         ids = args["ids"]
         query = args["query"]
@@ -316,6 +320,8 @@ class Lookup(BaseEndpoint):
                 types=types,
                 kind=kind,
                 NERtype=NERtype_error_or_value,
+                WD_type=WD_type,
+                ext_WD_type=ext_WD_type,
                 language=language,
                 ids=ids,
                 query=query,
