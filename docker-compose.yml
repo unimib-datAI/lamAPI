@@ -24,7 +24,7 @@ services:
       - "${MONGO_PORT}:27017"
     restart: always   
     volumes:
-      - /home/lamapi/data/mongo-data:/data/db
+      - C:/Users/a.belotti23/Documents/GitHub/mongo-data:/data/db
       - ~/my-data:/data/my-data
       
   es01:
@@ -32,7 +32,7 @@ services:
     container_name: lamapi_elastic
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
-      - /home/lamapi/data/esdata01:/usr/share/elasticsearch/data
+      - C:/Users/a.belotti23/Documents/GitHub/data/esdata01:/usr/share/elasticsearch/data
       - ./jvm.options:/usr/share/elasticsearch/config/jvm.options.d/jvm.options
     ports:
       - ${ELASTIC_PORT}:9200
@@ -65,7 +65,7 @@ services:
     container_name: lamapi_es02
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
-      - /home/lamapi/data/esdata02:/usr/share/elasticsearch/data
+      - C:/Users/a.belotti23/Documents/GitHub/data/esdata02:/usr/share/elasticsearch/data
       - ./jvm.options:/usr/share/elasticsearch/config/jvm.options.d/jvm.options
     environment:
       - node.name=es02
@@ -96,7 +96,7 @@ services:
     container_name: lamapi_es03
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
-      - /home/lamapi/data/esdata03:/usr/share/elasticsearch/data
+      - C:/Users/a.belotti23/Documents/GitHub/data/esdata03:/usr/share/elasticsearch/data
       - ./jvm.options:/usr/share/elasticsearch/config/jvm.options.d/jvm.options
     environment:
       - node.name=es03
