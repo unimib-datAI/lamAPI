@@ -145,6 +145,8 @@ def index_data(
         aliases = item.get("aliases", {})
         description = item.get("description", {}).get("value", None)
         NERtype = item.get("NERtype", None)
+        WD_type = item.get("WD_type", None)
+        ext_WD_type = item.get("ext_WD_type", None)
         types = item.get("types", {}).get("P31", [])
         kind = item.get("kind", None)
         popularity = int(item.get("popularity", 0))
@@ -204,6 +206,8 @@ def index_data(
                 "description": description,
                 "kind": kind,
                 "NERtype": NERtype,
+                "WD_type": WD_type,
+                "ext_WD_type": ext_WD_type,
                 "types": " ".join(types),
                 "length": len(name),
                 "ntoken": len(name.split(" ")),

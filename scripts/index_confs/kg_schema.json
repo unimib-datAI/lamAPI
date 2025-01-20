@@ -38,9 +38,21 @@
             "kind": {
                 "type": "keyword"
             },
+            
+
             "NERtype": {
                 "type": "keyword"
             },
+            "WD_type": {
+                "type": "keyword"
+            },
+            "ext_WD_type": {
+                "type": "keyword"
+            },
+
+
+
+
             "types": {
                 "type": "text"
             },
