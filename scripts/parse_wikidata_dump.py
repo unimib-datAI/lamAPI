@@ -62,7 +62,6 @@ file = bz2.BZ2File(file_path, "r")
 
 # MongoDB connection setup
 MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
-MONGO_ENDPOINT = "localhost"
 MONGO_ENDPOINT_PORT = int(MONGO_ENDPOINT_PORT)
 MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
 MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
@@ -597,7 +596,7 @@ def parse_wikidata_dump():
             # Dynamically update the total based on the current average size
             pbar.total = round(compressed_file_size / current_average_size)
             pbar.update(1)
-            
+
             if items_c.find({"entity": item["id"]}):  # Skip if already processed
                 continue
         

@@ -10,7 +10,7 @@
             "args": [
                 "index",
                 "wikidata21012025",
-                "client['wikidata21012025']",
+                "items",
                 "./scripts/index_confs/kg_schema.json"
             ]
         },

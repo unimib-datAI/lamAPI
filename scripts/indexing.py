@@ -280,8 +280,9 @@ def main():
     action = sys.argv[1]
 
     ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
-    #ELASTIC_ENDPOINT="lamapi_elastic"
+    ELASTIC_ENDPOINT="localhost"
     MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
+    MONGO_ENDPOINT="localhost:27017"
     es = create_elasticsearch_client(ELASTIC_ENDPOINT, ELASTIC_PORT)
     mongo_client = create_mongo_client(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT)
 
