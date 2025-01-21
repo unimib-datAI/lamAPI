@@ -54,7 +54,7 @@ BATCH_SIZE = 128  # Number of entities to insert in a single batch
 #     sys.exit(1)
 
 # file_path = sys.argv[1]  # Get the file path from command line argument
-file_path = "/home/lamapi/Downloads/wikidata-20241125-all.json.bz2"
+file_path = "./data/latest-all.json.bz2"
 compressed_file_size = os.path.getsize(file_path)
 initial_total_lines_estimate = compressed_file_size / initial_estimated_average_size
 
@@ -587,6 +587,7 @@ def parse_wikidata_dump():
     )
 
     pbar = tqdm(total=initial_total_lines_estimate)
+    count = 0
     for i, line in enumerate(file):
         try:
             item = json.loads(line[:-2])  # Remove the trailing characters
@@ -596,8 +597,16 @@ def parse_wikidata_dump():
             # Dynamically update the total based on the current average size
             pbar.total = round(compressed_file_size / current_average_size)
             pbar.update(1)
+            
+            if items_c.find({"entity": item["id"]}):  # Skip if already processed
+                continue
+        
 
-            parse_data(item, i, geolocation_subclass, organization_subclass)
+            if count <= 100000:
+                parse_data(item, i, geolocation_subclass, organization_subclass)
+                count = count +1
+            else:
+                break
         except json.decoder.JSONDecodeError:
             continue
         except Exception as e:
