@@ -69,7 +69,12 @@ def create_elasticsearch_client(endpoint, port):
 
 
 def create_mongo_client(endpoint, port):
-    return MongoClient(endpoint, int(port))
+    MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
+    MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
+    
+    return MongoClient(endpoint, int(port),
+    username=MONGO_ENDPOINT_USERNAME,
+    password=MONGO_ENDPOINT_PASSWORD)
 
 
 def print_usage():
@@ -267,6 +272,7 @@ def list_collections(mongo_client, db_name):
 
 
 def main():
+    print(sys.argv)
     if len(sys.argv) < 2:
         print_usage()
         sys.exit(1)
@@ -274,7 +280,9 @@ def main():
     action = sys.argv[1]
 
     ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
+    ELASTIC_ENDPOINT="localhost"
     MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
+    MONGO_ENDPOINT="localhost:27017"
     es = create_elasticsearch_client(ELASTIC_ENDPOINT, ELASTIC_PORT)
     mongo_client = create_mongo_client(MONGO_ENDPOINT, MONGO_ENDPOINT_PORT)
 
