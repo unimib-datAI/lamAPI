@@ -10,7 +10,7 @@ ELASTIC_PW = os.environ["ELASTIC_PASSWORD"]
 ELASTIC_ENDPOINT, ELASTIC_PORT = os.environ["ELASTIC_ENDPOINT"].split(":")
 
 # Load index mappings
-with open("index_mappings.json") as f:
+with open("api/index_mappings.json") as f:
     indexes_mappings = json.loads(f.read())
 
 
