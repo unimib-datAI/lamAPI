@@ -137,8 +137,9 @@ class LookupRetriever:
     def _get_final_candidates_list(
         self, result, name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
     ):
+        
         ids = list(set([t for entity in result for t in entity["types"].split(" ")]))
-        types_id_to_name = self._get_types_id_to_name(ids, kg)
+        types_id_to_name = self._get_types_id_to_name(ids, kg)    
 
         history = {}
         for entity in result:
@@ -147,13 +148,17 @@ class LookupRetriever:
             ed_score = round(editdistance(label_clean, name), 2)
             jaccard_score = round(compute_similarity_between_string(label_clean, name), 2)
             jaccard_ngram_score = round(compute_similarity_between_string(label_clean, name, 3), 2)
+            if len(entity["types"]) == 0:
+                types = []
+            else:
+                types = [
+                    {"id": id_type, "name": types_id_to_name.get(id_type, id_type)} for id_type in entity["types"].split(" ")
+                ]
             obj = {
                 "id": entity["id"],
                 "name": entity["name"],
                 "description": entity.get("description", ""),
-                "types": [
-                    {"id": id_type, "name": types_id_to_name.get(id_type, id_type)} for id_type in entity["types"].split(" ")
-                ],
+                "types": types,
                 "kind": entity.get("kind", None),
                 "NERtype": entity.get("NERtype", None),
                 "ambiguity_mention": ambiguity_mention,
