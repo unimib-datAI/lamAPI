@@ -1,4 +1,4 @@
-MAPPING = {
+{
     "settings": {
         "index": {
             "number_of_shards": 3,
@@ -15,7 +15,7 @@ MAPPING = {
                 }
             }
         }
-    }, 
+    },
     "mappings": {
         "properties": {
             "id": {"type": "text"},
@@ -23,12 +23,15 @@ MAPPING = {
                 "type": "text",
                 "analyzer": "my_analyzer"
             },
-            "description": {"type": "text"},
-            "types": {"type": "keyword"},
+            "language": {"type": "keyword"},
+            "is_alias": {"type": "boolean"},
+            "description": {"type": "text", "index": false},
+            "kind": {"type": "keyword"},
+            "NERtype": {"type": "keyword"},
+            "types": {"type": "text"},
             "length": {"type": "long"},
             "ntoken": {"type": "long"},
             "popularity": {"type": "double"}
         }
     }
 }
-
