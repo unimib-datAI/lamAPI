@@ -83,7 +83,6 @@ Unzip the data dump using the command:
     --db=wikidata30062023 wikidata30062023'
 
     
-
     
 ### Elasticsearch Indexing
 
@@ -95,10 +94,38 @@ To create the Elasticsearch index, follow these steps:
 2. Navigate to the scripts directory:
     ```
     cd scripts
-3. Run the indexing script:
+3. Run the elastic indexing script:
     ```
-    python elastic_indexing.py <DATABASE NAME>
+    python elastic_indexing.py <DATABASE NAME> <COLLECTION_NAME> <MAPPING_FILE>
+Notes:
+- Replace `<DATABASE NAME>` with the name of the MongoDB database where the Wikidata dump is stored.
+- Replace `<COLLECTION_NAME>` with the name of the MongoDB collection containing the extracted Wikidata entities (items).
+- Replace `<MAPPING_FILE>` with the path to the Elasticsearch mapping file (e.g., `index_confs/kg_schema.json`).
 It is recommended to use `tmux` or a similar tool to manage terminal sessions, which can help in monitoring the progress of long-running commands.
+
+
+### MongoDB Indexing
+
+To create MongoDB indexes, follow these steps:
+1.	Access the API container:
+    ´´´
+    docker exec -it lamapi_api bash
+
+2.	Navigate to the scripts directory:
+    ```
+    cd scripts
+
+3.	Run the Mongo indexing script:
+    ```
+    python build_mongo_indexes.py create_indexes <DATABASE_NAME>
+Notes:
+- Replace <DATABASE_NAME> with the target MongoDB database.
+- You can also use:
+    -   python build_mongo_indexes.py status to check MongoDB status.
+    -   python build_mongo_indexes.py list_databases to list databases.
+    -   python build_mongo_indexes.py list_collections <DATABASE_NAME> to list collections.
+It is recommended to use tmux or a similar tool for long-running tasks.
+
 
 ### Final Steps
 
