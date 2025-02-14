@@ -14,7 +14,6 @@ class Database:
         self.mongo = MongoClient(MONGO_ENDPOINT, int(MONGO_PORT))
         self.mappings = {kg.lower(): None for kg in SUPPORTED_KGS}
         self.update_mappings()
-        self.create_indexes()
 
     def update_mappings(self):
         history = {}
@@ -35,53 +34,6 @@ class Database:
                 elif parsed_date > history[kg_name]:
                     history[kg_name] = parsed_date
                     self.mappings[kg_name] = db
-
-    def create_indexes(self):
-        print("Creating indexes...", flush=True)
-        # Specify the collections and their respective fields to be indexed
-        index_specs = {
-            "cache": ["name", "lastAccessed", "limit"],  # Example: Indexing 'name' and 'lastAccessed' fields in 'cache' collection
-            "items": ["id_entity", "entity", "category", "popularity"],
-            "literals": ["id_entity", "entity"],
-            "objects": ["id_entity", "entity"],
-            "types": ["id_entity", "entity"],
-            "bow": ["id"]
-        }
-        for db_name in self.mappings.values():
-            if db_name is None:
-                continue
-            db = self.mongo[db_name]
-            for collection, fields in index_specs.items():
-                if collection == "cache":
-                    db[collection].create_index(
-                        [
-                            ("name", 1),
-                            ("limit", 1),
-                            ("kg", 1),
-                            ("fuzzy", 1),
-                            ("types", 1),
-                            ("kind", 1),
-                            ("NERtype", 1),
-                            ("language", 1),
-                        ],
-                        unique=True,
-                        background=True,  # Create the index in the background
-                    )
-                elif collection == "items":
-                    db[collection].create_index(
-                        [("entity", 1), ("kind", 1)],
-                        unique=True,
-                        background=True,  # Create the index in the background
-                    )
-                elif collection == "bow":
-                    db[collection].create_index(
-                        [("text", 1), ("id", 1)],
-                        unique=True,
-                        background=True,
-                    )
-                for field in fields:
-                    db[collection].create_index([(field, 1)], background=True)  # 1 for ascending order, background indexing
-        print("Indexes created.", flush=True)
 
     def get_supported_kgs(self):
         return self.mappings
