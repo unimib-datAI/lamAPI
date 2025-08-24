@@ -226,7 +226,7 @@ class LookupRetriever:
 
         ids = " ".join(ids_list)        
         query = self.create_ids_query(ids)
-        result_by_id = self.elastic_retriever.search(query, kg)
+        result_by_id = self.elastic_retriever.search(query, kg, limit=1)
         result_by_id = self._get_final_candidates_list(
             result_by_id, name, kg, ambiguity_mention, corrects_tokens, ntoken_mention, length_mention
         )
