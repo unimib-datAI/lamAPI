@@ -221,9 +221,9 @@ class Lookup(BaseEndpoint):
         query = args["query"]
         cache = args["cache"]
 
-        cache = cache in ["True", "true", None] 
-       
-        token_is_valid, token_error = params_validator.validate_token(token)
+        cache = cache in ["True", "true", None]
+
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         if not token_is_valid:
             return token_error
 
@@ -288,7 +288,7 @@ class Types(BaseEndpoint):
 
         token = args["token"]
         kg = args["kg"]
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
         if not token_is_valid:
@@ -324,7 +324,7 @@ class Objects(BaseEndpoint):
         token = args["token"]
         kg = args["kg"]
 
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
         if not token_is_valid:
@@ -365,7 +365,7 @@ class Bow(BaseEndpoint):
         token = args["token"]
         kg = args["kg"]
 
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
         if not token_is_valid:
@@ -408,7 +408,7 @@ class Predicates(BaseEndpoint):
         token = args["token"]
         kg = args["kg"]
 
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
         if not token_is_valid:
@@ -447,7 +447,7 @@ class Labels(BaseEndpoint):
         kg = args["kg"]
         lang = args["lang"]
 
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
         if not token_is_valid:
@@ -568,7 +568,7 @@ class Literals(BaseEndpoint):
         token = args["token"]
         kg = args["kg"]
 
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         kg_is_valid, kg_error_or_value = params_validator.validate_kg(database, kg)
 
         if not token_is_valid:
@@ -676,7 +676,7 @@ class Summary(BaseEndpoint):
         token = args["token"]
 
         # Validate token
-        token_is_valid, token_error = params_validator.validate_token(token)
+        token_is_valid, token_error = params_validator.validate_token(token, kg)
         if not token_is_valid:
             return token_error
 

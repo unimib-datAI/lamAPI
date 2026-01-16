@@ -1,4 +1,3 @@
-import base64
 import nltk
 import pickle
 import gzip
@@ -6,12 +5,32 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from pymongo import UpdateOne
 
-# Ensure NLTK resources are downloaded
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
+NLTK_RESOURCES = {
+    "punkt": "tokenizers/punkt",
+    "stopwords": "corpora/stopwords",
+}
+
+
+def ensure_nltk_resources():
+    """Best-effort NLTK resource setup; do not fail hard on download issues."""
+    for resource, path in NLTK_RESOURCES.items():
+        try:
+            nltk.data.find(path)
+            continue
+        except LookupError:
+            pass
+        try:
+            nltk.download(resource, quiet=True)
+        except Exception as exc:
+            print(f"NLTK resource '{resource}' unavailable: {exc}", flush=True)
 
 # Global stopwords to avoid reinitializing repeatedly
-stop_words = set(stopwords.words('english'))
+ensure_nltk_resources()
+try:
+    stop_words = set(stopwords.words('english'))
+except LookupError as exc:
+    print(f"NLTK stopwords unavailable, continuing without them: {exc}", flush=True)
+    stop_words = set()
 
 
 class BOWRetriever:
@@ -22,7 +41,11 @@ class BOWRetriever:
 
     def ensure_cache_indexes(self):
         """Ensure indexes on the cache collection."""
-        cache_collection = self.database.get_requested_collection(self.cache_collection_name)
+        try:
+            cache_collection = self.database.get_requested_collection(self.cache_collection_name)
+        except ValueError as exc:
+            print(f"Skipping BOW cache index creation: {exc}", flush=True)
+            return
         cache_collection.create_index([("text", 1)], background=True)
         cache_collection.create_index([("id", 1)], background=True)
         cache_collection.create_index([("text", 1), ("id", 1)], unique=True, background=True)
@@ -34,7 +57,10 @@ class BOWRetriever:
 
     def tokenize_text(self, text):
         """Tokenize and clean the text."""
-        tokens = word_tokenize(text.lower().strip())
+        try:
+            tokens = word_tokenize(text.lower().strip())
+        except LookupError:
+            tokens = text.lower().strip().split()
         return set(t for t in tokens if t not in stop_words and t.isalnum())
 
     def get_bow_from_db(self, entities=None, kg="wikidata"):

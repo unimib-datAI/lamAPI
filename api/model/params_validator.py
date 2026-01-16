@@ -2,9 +2,18 @@ import os
 from model.utils import build_error
 
 ACCESS_TOKEN = os.environ["LAMAPI_TOKEN"]
+SENSITIVE_KG_TOKEN = os.environ.get("LAMAPI_SENSITIVE_KG_TOKEN")
+SENSITIVE_KGS = [kg.strip().lower() for kg in os.environ.get("LAMAPI_SENSITIVE_KGS", "").split(",") if kg.strip()]
 
 class ParamsValidator:
-    def validate_token(self, token):
+    def validate_token(self, token, kg=None):
+        normalized_kg = kg.lower() if isinstance(kg, str) else None
+        if normalized_kg and normalized_kg in SENSITIVE_KGS:
+            if not SENSITIVE_KG_TOKEN:
+                return False, build_error("Sensitive KG access token is not configured", 403)
+            if token != SENSITIVE_KG_TOKEN:
+                return False, build_error("Invalid access token", 403)
+            return True, None
         if token != ACCESS_TOKEN:
             return False, build_error("Invalid access token", 403)
         else:
